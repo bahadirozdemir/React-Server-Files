@@ -1,0 +1,13 @@
+.carddesign{
+    width:450px;
+    height:250px;
+}
+.imagesle{
+    display:flex;
+    justify-content:center;
+    align-items:center; 
+    background-color: rgb(210, 9, 9);
+}
+.dropdown-toggle::after {
+    display: none !important; 
+  }
