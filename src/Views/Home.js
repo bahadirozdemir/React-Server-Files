@@ -1,7 +1,10 @@
+import { useState } from "react";
 const Home=()=>{
+
+
     return(
         <div>        
-            Giriş Yaptın usta hoşgeldin.
+           helal
         </div>
     )
 }

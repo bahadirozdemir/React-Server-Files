@@ -10,24 +10,39 @@ import Admin from "../Views/Admin";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Loading from "../Views/Loading/Loading";
 import DetailPage from "../Views/Product/DetailPage";
+import Sepet from "../Views/Sepet/Sepet";
+import Odeme from "../Views/Odeme/Odeme";
 import ProductLayout from "../Views/Product";
+import Siparislerim from "../Views/Siparislerim/Siparislerim"
 import AdminLayout from "../Auth/AdminLayout";
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import { CgProfile } from "react-icons/cg";
+import { SlBasket } from "react-icons/sl";
+import {doc, getDoc, } from "firebase/firestore";
+import { db } from "../config/firebase";
 const RouteContoller = () => {
+  
 
-  const { currentuser, setUser, logout } = useContext(AuthContext);
+  const { currentuser, setUser, logout,basketCount,setBasketCount} = useContext(AuthContext);
   const [isLoading, setLoading] = useState(true)
   const auth = getAuth();
 
+  const SepetCek = async(user)=>{
+    const veriler = await getDoc(doc(db,"sepet",user.uid))
+    if(veriler.exists()){
+      setBasketCount(veriler.data().sepetim.length)
+    }
+    else{
+      setBasketCount(0)
+    }
+  }
   onAuthStateChanged(auth, (user) => {
     //console.log(user)
     setUser(user);
     setTimeout(() => {
       setLoading(false);
     }, 500);
-
-    //navigate("/home")
+    SepetCek(user);
   });
 
 
@@ -38,7 +53,7 @@ const RouteContoller = () => {
     <>
 
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark" style={{ padding: 20 }}>
-        <NavLink className="navbar-brand" to="/">FYKHA</NavLink>
+        <NavLink className="navbar-brand" to="/"><div style={{width:"100px", height:"100px",display:"flex",justifyContent:"center",alignItems:"center"}}><img src={require('../images/FYKHA.png')} width={150} height={150}/></div></NavLink>
         <button className="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span className="navbar-toggler-icon"></span>
         </button>
@@ -55,7 +70,11 @@ const RouteContoller = () => {
                   <NavDropdown.Item href="/*" onClick={()=>{logout()}}>Siparişlerim</NavDropdown.Item>
                   <NavDropdown.Item href="/" onClick={()=>{logout()}}>Çıkış Yap</NavDropdown.Item>
                 </NavDropdown>
-                
+                <div>
+                <NavLink className="nav-link" to="/sepet"><SlBasket size={30} /></NavLink>
+                {basketCount > 0 ? <div style={{position:"absolute",right:0,bottom:0,color:"white",width:"17px",height:"17px",fontSize:"12px",borderRadius:"50%",backgroundColor:"white",color:"black",justifyContent:"center",alignItems:"center",display:"flex"}}><>{basketCount}</></div> : "" }
+               
+                </div>
               </div>
               :
               <>
@@ -91,6 +110,9 @@ const RouteContoller = () => {
         </Route>
         <Route element={<AuthLayout />}>
           <Route path="/home" element={<Home />} />
+          <Route path="/sepet" element={<Sepet />} />
+          <Route path="/OdemeSayfasi" element={<Odeme />} />
+          <Route path="/Siparislerim" element={<Siparislerim />} />
         </Route>
       </Routes>
 

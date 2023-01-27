@@ -7,9 +7,11 @@ export const AuthContext =createContext();
 export const AuthProvider = ({children})=>{
  const navigate = useNavigate();
  const [currentuser, setUser] = useState()
+ const [basketCount, setBasketCount] = useState(0)
+ const [Price, SetPrice] = useState(0)
     return ( 
     <AuthContext.Provider value={{
-      currentuser,setUser,
+      currentuser,setUser,setBasketCount,basketCount,Price,SetPrice,
       register:async(email,password) =>{
         try{
           await createUserWithEmailAndPassword(auth,email, password);

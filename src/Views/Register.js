@@ -1,7 +1,6 @@
 import React, { useContext } from 'react';
 import { useFormik } from 'formik';
 import {Link} from "react-router-dom"
-import "./Login.css"
 import RegisterValidation from './Validation/RegisterValidation';
 import classNames from 'classnames'
 import { AuthContext } from "../Context/AuthProvider";

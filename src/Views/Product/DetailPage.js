@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{useContext, useEffect,useState} from "react";
 import {
   MDBContainer,
   MDBRow,
@@ -11,29 +11,93 @@ import {
   MDBRipple,
 } from "mdb-react-ui-kit";
 import { Link, useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc,setDoc,updateDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
-
+import { AuthContext } from "../../Context/AuthProvider";
+import LoadingBasket from "../../Animation/74644-add-to-basket.json";
+import Lottie from "lottie-react";
 function DetailPage() {
+  const {currentuser,setBasketCount,basketCount}=useContext(AuthContext)
   const params = useParams();
   const [productDetailState, setProductDetailState] = useState([])
+  const [CheckBasketButton, setCheckBasketButton] = useState(false)
+  const [addLoading, setaddLoading] = useState(false)
   useEffect(() => {
     const getir = async () => {
-      const docRef = doc(db, "urunler", params.product_id);
-      const docSnap = await getDoc(docRef);
-
+      let docRef = doc(db, "urunler", params.product_id);
+      let docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        console.log(docSnap.data())
+        //console.log(docSnap.data())
         setProductDetailState(docSnap.data());
       } else {
         // doc.data() will be undefined in this case
         console.log("Veri Bulunamadı");
       }
+      const veriler = await getDoc(doc(db,"sepet",currentuser.uid))
+      if(veriler.data()){
+        setBasketCount(veriler.data().sepetim.length);
+        const ara = veriler.data().sepetim.find(sepetverileri => sepetverileri===params.product_id)
+        if(ara)
+        {
+          setCheckBasketButton(true)
+        }      
+      }
+
     }
     getir();
     console.log("veriler geldi")
   }, [])
-
+ const AddBasket=async()=>{
+       setaddLoading(true);
+       const veriler = await getDoc(doc(db,"sepet",currentuser.uid))
+    
+        if(veriler.data()){
+          let sepetdizi = veriler.data().sepetim; 
+          const ara = sepetdizi.find(sepetverileri => sepetverileri===params.product_id)
+          if(ara){
+            sepetdizi=[...sepetdizi.filter(data => data !== params.product_id)]
+            console.log("sepetten kaldırdık")
+            setBasketCount(basketCount-1);
+            setCheckBasketButton(false);
+            await updateDoc(doc(db,"sepet",currentuser.uid),{
+              sepetim:sepetdizi
+            }).catch(e=>{
+              console.log(e)
+            })
+          }
+          else{
+            sepetdizi.push(params.product_id);
+            console.log("güncelledik")
+            setBasketCount(basketCount+1);
+            setCheckBasketButton(true);
+            await updateDoc(doc(db,"sepet",currentuser.uid),{
+              sepetim:sepetdizi
+            }).catch(e=>{
+              console.log(e)
+            })
+          }
+          
+        }
+        else{
+          let sepetdizi = [];
+          sepetdizi.push(params.product_id);
+          console.log("sıfırdan ekledik")
+          setBasketCount(basketCount+1);
+          setCheckBasketButton(true);
+          await setDoc(doc(db, "sepet",currentuser.uid), {
+            sepetim:sepetdizi
+          }).catch(e=>{
+            console.log(e)
+          })
+        }
+       
+      setTimeout(() => {
+        setaddLoading(false);
+      },2000);
+  
+      
+     
+ }
  
   return (
     <MDBContainer fluid className="my-5">
@@ -102,7 +166,11 @@ function DetailPage() {
                 <Link to="/" className="text-dark fw-bold">
                   Geri Dön
                 </Link>
-                <MDBBtn color="primary">Sepete Ekle</MDBBtn>
+                {addLoading==true ? <Lottie animationData={LoadingBasket} style={{width:80,height:80}} loop={true} />
+                 : 
+                 <MDBBtn color="primary" onClick={()=>{AddBasket()}}>{CheckBasketButton==true ? "Sepetten Çıkar" : "Sepete Ekle"}</MDBBtn>
+                }
+              
               </div>
             </MDBCardBody>
           </MDBCard>

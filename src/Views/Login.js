@@ -5,6 +5,7 @@ import "./Login.css"
 import LoginValidation from './Validation/LoginValidation';
 import classNames from 'classnames'
 import { AuthContext } from "../Context/AuthProvider";
+ 
  const Login = () => {
   const {giris} = useContext(AuthContext)
    const {handleChange,handleSubmit,values,errors,touched} = useFormik({
@@ -20,8 +21,9 @@ import { AuthContext } from "../Context/AuthProvider";
    });
    return (
  
-  
-    <div className="Auth-form-container deneme">
+    
+   
+    <div className="Auth-form-container">
     <form onSubmit={handleSubmit} className="Auth-form" >
       <div className="Auth-form-content">
         <h3 className="Auth-form-title">Giriş Yapın</h3>

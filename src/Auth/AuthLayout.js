@@ -1,22 +1,29 @@
- import {Navigate, Outlet,useNavigate} from "react-router-dom";
+ import {Navigate, Outlet,Location, useLocation} from "react-router-dom";
 import { useContext} from 'react'
 import { AuthContext } from '../Context/AuthProvider'
 export default function AuthLayout(){
-const {currentuser} = useContext(AuthContext);
+const {currentuser,basketCount} = useContext(AuthContext);
+const location = useLocation();
+
  
-  console.log(currentuser)
-  if(currentuser==null)
+  if(location.pathname != "/odeme")
   {
-    console.log("kullanıcı yok logine yönlendirdim.") 
-    return <Navigate to="/login" replace />
+    if(currentuser==null)
+    {
+      console.log("kullanıcı yok logine yönlendirdim.") 
+      return <Navigate to="/login" replace />
+    }
+    else
+    {
+      return <Outlet/>
+    }
   }
-  else
-  {
+  else if(basketCount!=0 && currentuser!=null){
     return <Outlet/>
   }
-   
- 
-
- 
-
+  else{
+    console.log("anasayfa  yönlendi")
+    return <Navigate to="/" replace />
+  }
+  
 }

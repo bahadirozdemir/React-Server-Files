@@ -140,7 +140,7 @@ const Admin = () => {
       urun_renk: "",
       urun_turu: "",
       kargo:"",
-      kargofiyat:"",
+      kargofiyat:0,
       kargo_bool:false
     },
     validationSchema: AdminValidation
