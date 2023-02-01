@@ -18,16 +18,31 @@ import { useContext,useEffect,useState} from "react";
 import { AuthContext } from "../../Context/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import PaymentValidation from "../Validation/PaymentValidation";
-import {doc,deleteDoc,addDoc, collection, getDoc } from "firebase/firestore";
+import {doc,deleteDoc,addDoc, collection, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import Swal from 'sweetalert2'
 export default function Odeme() {
   const {currentuser,setBasketCount} = useContext(AuthContext)
   const [klavye, setklavye] = useState()
+  const [Loading, setLoading] = useState(true)
+  const [bilgisaklaniyor, setsaklaniyor] = useState(false)
+  const [Bilgiler, setBilgiler] = useState(true)
   const navigate = useNavigate();
   useEffect(() => {
    if(Price==0){
     navigate("/sepet")
+   }else{
+    const kullanici_bilgileri_getir=async()=>{
+      const kullanici_bilgileri = await getDoc(doc(db,"users",currentuser.uid))
+      if(kullanici_bilgileri.exists()){
+        if(kullanici_bilgileri.data().bilgisakla==true){
+          setsaklaniyor(true);
+          setBilgiler(kullanici_bilgileri.data());
+        }
+      }
+    }
+    kullanici_bilgileri_getir();
+   
    }
   },[])
   
@@ -41,7 +56,7 @@ export default function Odeme() {
       Adres: '',
       email:"",
       telefon:"",
-      OdenenFiyat:parseFloat(parseFloat(Price.UrunToplam) + parseFloat(Price.KargoToplam)).toFixed(2),
+      OdenenFiyat:parseFloat(parseFloat(Price.tfiyat) + parseFloat(Price.tkargo)).toFixed(2),
       BilgiSakla:false,
       OdemeYontemi:"Kredi Kartı",
       Kartisim:"",
@@ -69,7 +84,17 @@ export default function Odeme() {
         siparisveren:currentuser.uid,
         siparistarihi:date,   
         Urunler:urunler.data().sepetim  
-      }).then(x=>{
+      }).then(async()=>{
+        if(values.BilgiSakla==true){
+          await setDoc(doc(db, "users",currentuser.uid), {
+            Adres:values.Adres,
+            email:values.email,
+            isim:values.isim,
+            soyisim:values.Soyisim,
+            telefon:values.telefon,
+            bilgisakla:true
+          })
+        }
         Swal.fire({
           title: 'Başarılı',
           text: "Siparişiniz Başarıyla Verildi.Siparişlerim Kısmından Geçmiş Siparişlere Bakabilirsiniz.",
@@ -87,6 +112,14 @@ export default function Odeme() {
       })
     },
   });
+  if(bilgisaklaniyor==true){
+     values.Adres=Bilgiler.Adres;
+     values.isim=Bilgiler.isim
+     values.email=Bilgiler.email
+     values.Soyisim=Bilgiler.soyisim
+     values.telefon=Bilgiler.telefon
+     console.log("Bilgiler Ayarlandı")
+  }
   return (
     <MDBContainer className="py-5">
       <MDBRow>
@@ -101,12 +134,12 @@ export default function Odeme() {
               
                 <MDBCol>
                 <div style={{ display: "flex", flexDirection: "row" }}>{touched.isim && errors.isim ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}><label style={{ fontSize: 10, color: "red" }}>{errors.isim}</label></div> : null}</div>
-                  <MDBInput label="Adınız" id="form1" type="text" name="isim" value={values.isim} onChange={handleChange} />
+                  <MDBInput label="Adınız" id="form1" type="text" name="isim" value={bilgisaklaniyor==true ? Bilgiler.isim : values.isim} onChange={handleChange} disabled={bilgisaklaniyor==true ? true :false} />
                 </MDBCol>
               
                 <MDBCol>
                 <div style={{ display: "flex", flexDirection: "row" }}>{touched.Soyisim && errors.Soyisim ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}><label style={{ fontSize: 10, color: "red" }}>{errors.Soyisim}</label></div> : null}</div>
-                  <MDBInput label="Soyadınız" id="form2" type="text" name="Soyisim" value={values.Soyisim} onChange={handleChange}/>
+                  <MDBInput label="Soyadınız" id="form2" type="text" name="Soyisim" value={bilgisaklaniyor==true ? Bilgiler.soyisim : values.Soyisim} onChange={handleChange} disabled={bilgisaklaniyor==true ? true :false}/>
                 </MDBCol>
               </MDBRow>
               <div style={{ display: "flex", flexDirection: "row" }}>{touched.Adres && errors.Adres ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}><label style={{ fontSize: 10, color: "red" }}>{errors.Adres}</label></div> : null}</div>
@@ -116,8 +149,9 @@ export default function Odeme() {
                 id="form3"
                 type="text"
                 name="Adres"
-                value={values.Adres}
+                value={bilgisaklaniyor==true ? Bilgiler.Adres : values.Adres}
                 onChange={handleChange}
+                disabled={bilgisaklaniyor==true ? true :false}
               />
               <div style={{ display: "flex", flexDirection: "row" }}>{touched.email && errors.email ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}><label style={{ fontSize: 10, color: "red" }}>{errors.email}</label></div> : null}</div>
               <MDBInput
@@ -126,8 +160,9 @@ export default function Odeme() {
                 id="form4"
                 type="email"
                 name="email"
-                value={values.email}
+                value={bilgisaklaniyor==true ? Bilgiler.email : values.email}
                 onChange={handleChange}
+                disabled={bilgisaklaniyor==true ?  true :false}
               />
               <div style={{ display: "flex", flexDirection: "row" }}>{touched.telefon && errors.telefon ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}><label style={{ fontSize: 10, color: "red" }}>{errors.telefon}</label></div> : null}</div>
               <MDBInput
@@ -137,17 +172,18 @@ export default function Odeme() {
                 type="text"
                 name="telefon"
                 maxLength={11}
-                value={values.telefon}
+                value={bilgisaklaniyor==true ? Bilgiler.telefon : values.telefon}
                 onChange={(event)=>{
                   if(event.target.value.match(/[a-z]/i)){
                     event.target.value="";
                   }
                   handleChange(event);
                 }}
+                disabled={bilgisaklaniyor==true ? true :false}
               />
 
               <hr className="my-4" />
-               
+              {bilgisaklaniyor!=true &&
               <MDBCheckbox
                 id="checkoutForm2"
                 label="Bilgilerimi bir dahaki sefere sakla."
@@ -155,6 +191,7 @@ export default function Odeme() {
                 onChange={handleChange}
                 value={values.BilgiSakla}
               />
+             }
 
               <hr className="my-4" />
 
@@ -266,10 +303,7 @@ export default function Odeme() {
                   />
                 </MDBCol>
               </MDBRow>
-
-              <MDBBtn size="lg"  disabled={disable_form == true ? "true" : ""}>
-                Ödemeyi Tamamla
-              </MDBBtn>
+              <button  type="submit" class="btn btn-main btn-small" to={"/OdemeSayfasi"} disabled={disable_form == true ? "true" : ""}>Ödemeyi Tamamla</button>
             </MDBCardBody>
             </form>
           </MDBCard>
@@ -284,11 +318,11 @@ export default function Odeme() {
               <MDBListGroup >
                 <MDBListGroupItem className="d-flex justify-content-between align-items-center border-0 px-0 pb-0">
                   Ürün Toplamı
-                  <span>{Price.UrunToplam} TL</span>
+                  <span>{Price.tfiyat ? Price.tfiyat.toFixed(2) : ""} TL</span>
                 </MDBListGroupItem>
                 <MDBListGroupItem className="d-flex justify-content-between align-items-center border-0 px-0 pb-0">
                   Kargo
-                  <span>{Price.KargoToplam==0 ? "Kargo Bedava" : Price.KargoToplam}</span>
+                  <span>{Price.tkargo==0 ? "Kargo Bedava" : parseFloat(Price.tkargo).toFixed(2)+" TL"}</span>
                 </MDBListGroupItem>
                 <hr className="my-2"></hr>
                 <MDBListGroupItem className="d-flex justify-content-between align-items-center border-0 px-0 pb-0">
@@ -299,7 +333,7 @@ export default function Odeme() {
                     </strong>
                   </div>
                   <span>
-                    <strong>{parseFloat(parseFloat(Price.UrunToplam) + parseFloat(Price.KargoToplam)).toFixed(2)} TL</strong>
+                    <strong>{parseFloat(parseFloat(Price.tfiyat) + parseFloat(Price.tkargo)).toFixed(2)} TL</strong>
                   </span>
                 </MDBListGroupItem>
               </MDBListGroup>

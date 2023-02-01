@@ -1,6 +1,6 @@
 import { React, useState, useContext } from "react";
 import { AuthContext } from "../Context/AuthProvider";
-import { Routes, Route, NavLink } from 'react-router-dom'
+import { Routes, Route,useNavigate} from 'react-router-dom'
 import Home from '../Views/Home'
 import Login from '../Views/Login'
 import Anasayfa from '../Views/Product/Anasayfa'
@@ -15,18 +15,20 @@ import Odeme from "../Views/Odeme/Odeme";
 import ProductLayout from "../Views/Product";
 import Siparislerim from "../Views/Siparislerim/Siparislerim"
 import AdminLayout from "../Auth/AdminLayout";
-import NavDropdown from 'react-bootstrap/NavDropdown';
-import { CgProfile } from "react-icons/cg";
-import { SlBasket } from "react-icons/sl";
+import LoginLayout from "../Auth/LoginLayout";
+import Products from '../Views/Product/Products'
 import {doc, getDoc, } from "firebase/firestore";
 import { db } from "../config/firebase";
+import HeaderKapsa from "../Views/HeaderKapsa";
+
+import ErrorPage from "../Views/ErrorPage";
+import SingleProduct from "../Views/Product/SingleProduct";
 const RouteContoller = () => {
   
 
   const { currentuser, setUser, logout,basketCount,setBasketCount} = useContext(AuthContext);
   const [isLoading, setLoading] = useState(true)
   const auth = getAuth();
-
   const SepetCek = async(user)=>{
     const veriler = await getDoc(doc(db,"sepet",user.uid))
     if(veriler.exists()){
@@ -37,12 +39,14 @@ const RouteContoller = () => {
     }
   }
   onAuthStateChanged(auth, (user) => {
-    //console.log(user)
-    setUser(user);
+    if(user){
+      setUser(user);
+      SepetCek(user);
+    }
     setTimeout(() => {
       setLoading(false);
     }, 500);
-    SepetCek(user);
+   
   });
 
 
@@ -52,70 +56,31 @@ const RouteContoller = () => {
   return (
     <>
 
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark" style={{ padding: 20 }}>
-        <NavLink className="navbar-brand" to="/"><div style={{width:"100px", height:"100px",display:"flex",justifyContent:"center",alignItems:"center"}}><img src={require('../images/FYKHA.png')} width={150} height={150}/></div></NavLink>
-        <button className="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-          <span className="navbar-toggler-icon"></span>
-        </button>
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav">
-            <li className="nav-item active">
-              <NavLink className="nav-link" to="/">Anasayfa <span className="sr-only"></span></NavLink>
-            </li>
-            {currentuser ?
-
-              <div style={{ position: "absolute", right: 50, display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10 }}>
-                <NavDropdown title={<CgProfile size={30} />} id="navbarScrollingDropdown" >
-                  <NavDropdown.Item href="/*" onClick={()=>{logout()}}>Profil</NavDropdown.Item>
-                  <NavDropdown.Item href="/*" onClick={()=>{logout()}}>Siparişlerim</NavDropdown.Item>
-                  <NavDropdown.Item href="/" onClick={()=>{logout()}}>Çıkış Yap</NavDropdown.Item>
-                </NavDropdown>
-                <div>
-                <NavLink className="nav-link" to="/sepet"><SlBasket size={30} /></NavLink>
-                {basketCount > 0 ? <div style={{position:"absolute",right:0,bottom:0,color:"white",width:"17px",height:"17px",fontSize:"12px",borderRadius:"50%",backgroundColor:"white",color:"black",justifyContent:"center",alignItems:"center",display:"flex"}}><>{basketCount}</></div> : "" }
-               
-                </div>
-              </div>
-              :
-              <>
-                <li className="nav-item">
-                  <NavLink className="nav-link" to="/login">Giriş Yap</NavLink>
-                </li>
-                <li className="nav-item">
-                  <NavLink className="nav-link" to="/kayitol">Kayıt Ol</NavLink>
-                </li>
-              </>
-            }
-            {currentuser ?
-              <li className="nav-item">
-                <NavLink className="nav-link" to="/home">Ürünler</NavLink>
-              </li>
-              :
-              ""
-            }
-
-
-          </ul>
-        </div>
-      </nav>
+     
+    
       <Routes>
+      <Route element={<HeaderKapsa />}>
         <Route path="/" element={<ProductLayout />}>
           <Route index={true} element={<Anasayfa />} />
           <Route path="productdetail/:product_id/:product_name" element={<DetailPage />} />
         </Route>
+
+        <Route path="Urunler/:Cinsiyet/:page" element={<Products />} />
+        <Route element={<LoginLayout />}>
         <Route path="/login" element={<Login />} />
         <Route path="/kayitol" element={<Register />} />
-        <Route element={<AdminLayout />}>
-          <Route path="/admin" element={<Admin />} />
         </Route>
         <Route element={<AuthLayout />}>
-          <Route path="/home" element={<Home />} />
           <Route path="/sepet" element={<Sepet />} />
           <Route path="/OdemeSayfasi" element={<Odeme />} />
           <Route path="/Siparislerim" element={<Siparislerim />} />
         </Route>
+        <Route path="/SingleProduct/:product_id/:Marka" element={<SingleProduct />} />
+        </Route>
+        <Route path="*" element={<ErrorPage />} />
       </Routes>
-
+   
+    
     </>
   )
 

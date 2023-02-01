@@ -50,7 +50,7 @@ const Admin = () => {
           benzersiz_id = uuid();
         }
         else {
-          console.log("benzersiz olan bulundu.")
+       
           setid(benzersiz_id);
           break;
         }
@@ -167,8 +167,7 @@ const Admin = () => {
         console.log(e)
       })
 
-      console.log("Ürün Başarıyla Eklendi.");
-      console.log("her şey tamamlandı.");
+ 
       Swal.fire({
         title: 'Uyarı',
         text: "Başarıyla Ürün Ekledin.",

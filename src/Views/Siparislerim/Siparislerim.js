@@ -1,45 +1,70 @@
-import React from 'react';
-import { MDBBadge, MDBBtn, MDBTable, MDBTableHead, MDBTableBody } from 'mdb-react-ui-kit';
-
+import React,{ useContext,useEffect,useState} from "react";
+import { MDBTable, MDBTableHead, MDBTableBody } from 'mdb-react-ui-kit';
+import {doc,collection, getDocs,where,query,orderBy,getDoc} from "firebase/firestore";
+import { db } from '../../config/firebase';
+import { AuthContext } from "../../Context/AuthProvider";
 export default function App() {
+  const [Siparisler, setSiparisler] = useState([])
+  const [Urunler, setUrunler] = useState([])
+  const [Loading, setLoading] = useState(true)
+  const {currentuser} = useContext(AuthContext)
+  useEffect(() => {
+    const siparisleri_getir=async()=>{
+ 
+      const querySnapshot = await getDocs(query(collection(db, "Siparisler"),where("siparisveren","==",currentuser.uid),orderBy('siparistarihi',"desc")));
+      if(querySnapshot.size!=0){
+          querySnapshot.forEach((siparis_verileri) => {
+            setSiparisler(data=> [...data,siparis_verileri.data()]);
+            siparis_verileri.data().Urunler.forEach(async(urun_numaralari) => {
+                const veriler = await getDoc(doc(db,"urunler",urun_numaralari))
+                if(veriler.exists()){
+                  setUrunler(data=> [...data,veriler.data()]);
+                }            
+            });
+        });
+      }
+      else{
+        console.log("sipariş yok")
+      }
+    
+ 
+
+        setTimeout(() => {
+          setLoading(false);
+        },1500);
+
+      
+    }
+    siparisleri_getir();
+  },[])
   return (
-    <MDBTable align='middle'>
+    <div style={{padding:50}}>
+    <MDBTable>
       <MDBTableHead>
         <tr>
+          <th scope='col'>Ürün Markası</th>
+          <th scope='col'>Cinsiyet</th>
+          <th scope='col'>Ürün Adeti</th>
           <th scope='col'>Sipariş Tarihi</th>
-          <th scope='col'>Sipariş Özeti</th>
-          <th scope='col'>Alıcı</th>
           <th scope='col'>Tutar</th>
-          <th scope='col'>Detay</th>
+          <th scope='col'>Sipariş Durumu</th>
         </tr>
       </MDBTableHead>
       <MDBTableBody>
-        <tr>
-          <td>
-            <div className='d-flex align-items-center'>
-             
-              <div className='ms-3'>
-                <p className='fw-bold mb-1'>27.01.2023</p>
-              </div>
-            </div>
-          </td>
-          <td>
-            <p className='fw-normal mb-1'>2 Ürün</p>
-          </td>
-          <td>
-             Bahadır Özdemir
-          </td>
-          <td>1290 TL</td>
-          <td>
-            <MDBBtn color='link' rounded size='sm'>
-              Detaylar
-            </MDBBtn>
-          </td>
+      {Loading==false > 0 ?
+      Siparisler.map((element,value)=>(
+        <tr key={value}>
+        <td>{Urunler[value].urun_markasi}</td>
+        <td>{Urunler[value].cinsiyet}</td>
+        <td>{element.Urunler.length}</td>
+        <td>{element.siparistarihi}</td>
+        <td>{element.odenen} TL</td>
+        <td>Hazırlanıyor</td>
         </tr>
-        
-        
-       
+      ))      
+      :"Yükleniyor"}
       </MDBTableBody>
     </MDBTable>
+    </div>
   );
 }

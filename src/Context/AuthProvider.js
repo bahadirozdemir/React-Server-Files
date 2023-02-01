@@ -23,7 +23,7 @@ export const AuthProvider = ({children})=>{
             confirmButtonText:"Tamam"
           }).then((result) => {
             if (result.isConfirmed) {
-              navigate("/home")
+              navigate("/")
             }  
           })
         }
@@ -51,11 +51,11 @@ export const AuthProvider = ({children})=>{
             if (result.isConfirmed) {
               if(email=="root@gmail.com")
               {
-                navigate("/admin")
+                navigate("/")
               }
               else
               {
-                navigate("/home")
+                navigate("/")
               }
           
             }  
@@ -75,6 +75,7 @@ export const AuthProvider = ({children})=>{
       logout:async()=>{
         try{
           await signOut(auth);
+          setUser(null);
           Swal.fire({
             title: 'Uyarı',
             text: "Başarıyla Çıkış Yaptınız.",
@@ -83,7 +84,7 @@ export const AuthProvider = ({children})=>{
             confirmButtonText:"Tamam"
           }).then((result) => {
             if (result.isConfirmed) {
-              navigate("/home")
+              navigate("/")
 
             }  
           })
