@@ -4,6 +4,8 @@ import { Link } from "react-router-dom"
 import LoginValidation from './Validation/LoginValidation';
 import classNames from 'classnames';
 import { AuthContext } from "../Context/AuthProvider";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 function Login() {
     const { giris } = useContext(AuthContext)
     const { handleChange, handleSubmit, values, errors, touched } = useFormik({
@@ -14,7 +16,14 @@ function Login() {
         validationSchema: LoginValidation
         ,
         onSubmit: values => {
-            giris(values.email, values.password)
+            giris(values.email, values.password).then((result)=>{
+                if(result== -1){
+                    toast.dismiss();
+                    toast.error('E-Mail veya Şifre Hatalı.',
+                    { position: toast.POSITION.TOP_CENTER, className: 'error-toast-message' }
+                    )
+                }
+            })
         },
     });
     return (
@@ -62,13 +71,14 @@ function Login() {
                                         {touched.password && errors.password ? <div style={{marginTop:5,display:"flex",justifyContent:"center",alignItems:"center",width:"100%"}}><label style={{fontSize:15,color:"red"}}>{errors.password}</label></div> : null}
                                     </div>
 
-                                    <button  type='submit' className="btn btn-main mt-3 btn-block">Login</button>
+                                    <button  type='submit' className="btn btn-main mt-3 btn-block">Giriş Yap</button>
                                 </form>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <div><ToastContainer/></div>
         </div>
     )
 }

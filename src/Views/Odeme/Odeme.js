@@ -16,22 +16,20 @@ import {
 import { useFormik } from 'formik';
 import { useContext,useEffect,useState} from "react";
 import { AuthContext } from "../../Context/AuthProvider";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import PaymentValidation from "../Validation/PaymentValidation";
 import {doc,deleteDoc,addDoc, collection, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import Swal from 'sweetalert2'
 export default function Odeme() {
-  const {currentuser,setBasketCount} = useContext(AuthContext)
+  const {currentuser,setBasketCount,basketCount,Price} = useContext(AuthContext)
   const [klavye, setklavye] = useState()
   const [Loading, setLoading] = useState(true)
   const [bilgisaklaniyor, setsaklaniyor] = useState(false)
   const [Bilgiler, setBilgiler] = useState(true)
   const navigate = useNavigate();
   useEffect(() => {
-   if(Price==0){
-    navigate("/sepet")
-   }else{
+  
     const kullanici_bilgileri_getir=async()=>{
       const kullanici_bilgileri = await getDoc(doc(db,"users",currentuser.uid))
       if(kullanici_bilgileri.exists()){
@@ -43,80 +41,148 @@ export default function Odeme() {
     }
     kullanici_bilgileri_getir();
    
-   }
+   
   },[])
-  
-
-  const {Price} = useContext(AuthContext)
+  if(Price.tfiyat==undefined){
+    navigate("/sepet")
+  }
   const [disable_form, setDisable_Form] = useState(false)
   const {handleChange,handleSubmit,values,errors,touched,setFieldValue} = useFormik({
     initialValues: {
       isim:"",
-      Soyisim: '',
       Adres: '',
       email:"",
       telefon:"",
-      OdenenFiyat:parseFloat(parseFloat(Price.tfiyat) + parseFloat(Price.tkargo)).toFixed(2),
       BilgiSakla:false,
       OdemeYontemi:"Kredi Kartı",
       Kartisim:"",
       KartNo:"",
       St:"",
       CVV:"",
+      Stok:true,
 
     },
     validationSchema:PaymentValidation
     ,
     onSubmit: async(values) => {
-      setDisable_Form(true);
-      setBasketCount(0);
-      const urunler = await getDoc(doc(db,"sepet",currentuser.uid))
-      await deleteDoc(doc(db, "sepet", currentuser.uid));
-      const current = new Date();
-      const date = `${current.getDate()}.${current.getMonth()+1}.${current.getFullYear()}`;
-      await addDoc(collection(db, "Siparisler"), {
-        isim:values.isim + values.Soyisim,
-        adres:values.Adres,
-        email:values.email,
-        telefon:values.telefon,
-        odenen:values.OdenenFiyat,
-        odemeyontemi:values.OdemeYontemi,
-        siparisveren:currentuser.uid,
-        siparistarihi:date,   
-        Urunler:urunler.data().sepetim  
-      }).then(async()=>{
-        if(values.BilgiSakla==true){
-          await setDoc(doc(db, "users",currentuser.uid), {
-            Adres:values.Adres,
-            email:values.email,
-            isim:values.isim,
-            soyisim:values.Soyisim,
-            telefon:values.telefon,
-            bilgisakla:true
+      const check_sepet = await getDoc(doc(db,"sepet",currentuser.uid))
+      check_sepet.data().sepetim.forEach(async(element,index) => {
+        const stok_check = await getDoc(doc(db,"urunler",element))
+        if(stok_check.data().stok==0){
+          values.Stok=false;
+        }
+        if(check_sepet.data().sepetim.length -1 ==index && values.Stok == true){
+          if(check_sepet.exists() &&  check_sepet.data().sepetim.length==basketCount && values.Stok == true){
+            setDisable_Form(true);
+            setBasketCount(0);
+            const urunler = await getDoc(doc(db,"sepet",currentuser.uid))
+            let Siparis_Urunleri = [];
+            urunler.data().sepetim.forEach(element => {
+              const find = Price.Adetler.find(data => data.urun_id === element)
+              Siparis_Urunleri.push({Urun_No:element,Adet:find.amount})
+            });  
+            await deleteDoc(doc(db, "sepet", currentuser.uid));
+            const current = new Date();
+            let newDate = new Date()
+            let date = newDate.getDate();
+            let month = newDate.getMonth() + 1;
+            let year = newDate.getFullYear();
+            if(month.toString().length==1){
+              month = "0"+month;
+            }
+            if(date.toString().length==1){
+                date="0"+date;
+            }
+            let Hours = current.getHours()
+            let Minutes =current.getMinutes();
+            if(Hours.toString().length==1){
+              Hours = "0"+Hours;
+            }
+            if(Minutes.toString().length==1){
+              Minutes="0"+Minutes;
+            }
+            await addDoc(collection(db, "Siparisler"), {
+              isim:values.isim + values.Soyisim,
+              adres:values.Adres,
+              email:values.email,
+              telefon:values.telefon,
+              odenen:parseFloat(parseFloat(Price.tfiyat) + parseFloat(Price.tkargo)).toFixed(2),
+              odemeyontemi:values.OdemeYontemi,
+              siparisveren:currentuser.uid,
+              siparistarihi:date+"."+month+"."+year+" "+Hours+":"+Minutes,
+              sipariszamani:new Date().getTime(),
+              Urunler:Siparis_Urunleri
+            }).then(async()=>{
+              if(values.BilgiSakla==true){
+                await updateDoc(doc(db, "users",currentuser.uid), {
+                  Adres:values.Adres,
+                  email:values.email,
+                  isim:values.isim,
+                  soyisim:values.Soyisim,
+                  telefon:values.telefon,
+                  bilgisakla:true
+                })
+              }
+              urunler.data().sepetim.forEach(async(element) => {
+                const find = Price.Adetler.find(data => data.urun_id === element)
+                const urunler = await getDoc(doc(db,"urunler",element))
+                let urun_stok_bilgisi = urunler.data().stok - find.amount;
+                await updateDoc(doc(db, "urunler",element), {
+                   stok:urun_stok_bilgisi
+                })
+              });
+              Swal.fire({
+                title: 'Başarılı',
+                text: "Siparişiniz Başarıyla Verildi.Siparişlerim Kısmından Geçmiş Siparişlere Bakabilirsiniz.",
+                icon: 'success',
+                confirmButtonColor: '#228B22',
+                confirmButtonText:"Tamam",
+                allowOutsideClick: false       
+              }).then((result) => {   
+                window.location.href="/" 
+              })
+            }).catch(err=>{
+              console.log(err);
+            })
+          }
+          else{
+            Swal.fire({
+              title: 'Dikkat',
+              text: "Sepet İçeriği Değişti. Ana Sayfaya Yönlendirileceksiniz.",
+              icon: 'warning',
+              confirmButtonColor: '#228B22',
+              confirmButtonText:"Tamam",
+              allowOutsideClick: false       
+            }).then((result) => {
+              if (result.isConfirmed) {
+                window.location.href="/"
+              }  
+            })
+          }
+        }
+        else if(values.Stok==false) {
+          Swal.fire({
+            title: 'Dikkat',
+            text: "Üzgünüz Sepetinizdeki Bir Ürünün Stoğu Bulunamamaktadır.Ürün Satın alınmış veya kaldırılmış olabilir.Sepete Yönlendiriliyorsunuz.",
+            icon: 'warning',
+            confirmButtonColor: '#228B22',
+            confirmButtonText:"Tamam",
+            allowOutsideClick: false       
+          }).then((result) => {
+            if (result.isConfirmed) {
+              window.location.href="/sepet"
+            }  
           })
         }
-        Swal.fire({
-          title: 'Başarılı',
-          text: "Siparişiniz Başarıyla Verildi.Siparişlerim Kısmından Geçmiş Siparişlere Bakabilirsiniz.",
-          icon: 'success',
-          confirmButtonColor: '#228B22',
-          confirmButtonText:"Tamam",
-          allowOutsideClick: false       
-        }).then((result) => {
-          if (result.isConfirmed) {
-            navigate("/")
-          }  
-        })
-      }).catch(err=>{
-        console.log(err);
-      })
+      });  
+    
+     
     },
   });
   if(bilgisaklaniyor==true){
      values.Adres=Bilgiler.Adres;
-     values.isim=Bilgiler.isim
+     values.isim=Bilgiler.isim_soyisim
      values.email=Bilgiler.email
-     values.Soyisim=Bilgiler.soyisim
      values.telefon=Bilgiler.telefon
      console.log("Bilgiler Ayarlandı")
   }
@@ -134,13 +200,8 @@ export default function Odeme() {
               
                 <MDBCol>
                 <div style={{ display: "flex", flexDirection: "row" }}>{touched.isim && errors.isim ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}><label style={{ fontSize: 10, color: "red" }}>{errors.isim}</label></div> : null}</div>
-                  <MDBInput label="Adınız" id="form1" type="text" name="isim" value={bilgisaklaniyor==true ? Bilgiler.isim : values.isim} onChange={handleChange} disabled={bilgisaklaniyor==true ? true :false} />
-                </MDBCol>
-              
-                <MDBCol>
-                <div style={{ display: "flex", flexDirection: "row" }}>{touched.Soyisim && errors.Soyisim ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}><label style={{ fontSize: 10, color: "red" }}>{errors.Soyisim}</label></div> : null}</div>
-                  <MDBInput label="Soyadınız" id="form2" type="text" name="Soyisim" value={bilgisaklaniyor==true ? Bilgiler.soyisim : values.Soyisim} onChange={handleChange} disabled={bilgisaklaniyor==true ? true :false}/>
-                </MDBCol>
+                  <MDBInput label="Adınız ve Soyadınız" id="form1" type="text" name="isim" value={bilgisaklaniyor==true ? Bilgiler.isim_soyisim : values.isim} onChange={handleChange} disabled={bilgisaklaniyor==true ? true :false} />
+                </MDBCol>          
               </MDBRow>
               <div style={{ display: "flex", flexDirection: "row" }}>{touched.Adres && errors.Adres ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}><label style={{ fontSize: 10, color: "red" }}>{errors.Adres}</label></div> : null}</div>
               <MDBInput
@@ -303,7 +364,7 @@ export default function Odeme() {
                   />
                 </MDBCol>
               </MDBRow>
-              <button  type="submit" class="btn btn-main btn-small" to={"/OdemeSayfasi"} disabled={disable_form == true ? "true" : ""}>Ödemeyi Tamamla</button>
+              <button  type="submit" class="btn btn-main btn-small" disabled={disable_form == true ? "true" : ""}>Ödemeyi Tamamla</button>
             </MDBCardBody>
             </form>
           </MDBCard>

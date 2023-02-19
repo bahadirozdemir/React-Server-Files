@@ -3,7 +3,6 @@ import * as Yup from 'yup'
 
 const PaymentValidation=Yup.object().shape({
     isim:Yup.string().required('Bu Alanın Doldurulması Zorunludur'),
-    Soyisim:Yup.string().required('Bu Alanın Doldurulması Zorunludur'),
     Adres:Yup.string().required('Bu Alanın Doldurulması Zorunludur'),
     email:Yup.string().required("E-Mail Adresi Boş Geçilemez").email('Geçerli Bir E-Mail Adresi Giriniz.'),
     telefon:Yup.string().required('Bu Alanın Doldurulması Zorunludur'),

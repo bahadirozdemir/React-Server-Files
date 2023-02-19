@@ -1,21 +1,6 @@
-import {
-  MDBBtn,
-  MDBCard,
-  MDBCardBody,
-  MDBCardHeader,
-  MDBCardImage,
-  MDBCol,
-  MDBContainer,
-  MDBIcon,
-  MDBInput,
-  MDBListGroup,
-  MDBListGroupItem,
-  MDBRipple,
-  MDBRow,
-  MDBTooltip,
-  MDBTypography,
-} from "mdb-react-ui-kit";
-import { useNavigate,Link } from "react-router-dom";
+import 'animate.css';
+import Swal from 'sweetalert2'
+import { useNavigate, Link } from "react-router-dom";
 import React, { useEffect, useContext, useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { AuthContext } from "../../Context/AuthProvider";
@@ -27,9 +12,11 @@ import 'react-lazy-load-image-component/src/effects/blur.css';
 import Lottie from "lottie-react";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAutoAnimate } from '@formkit/auto-animate/react'
 import "./Sepet.css"
 export default function Sepet() {
-  const { currentuser, setBasketCount, SetPrice } = useContext(AuthContext)
+  const [animationParent] = useAutoAnimate()
+  const { currentuser, setBasketCount, SetPrice, basketCount } = useContext(AuthContext)
   const [sepetim, setSepetim] = useState([])
   const [Basketloading, setBasketLoading] = useState(true)
   const [ToplamFiyat, setFiyat] = useState(0)
@@ -37,6 +24,8 @@ export default function Sepet() {
   const [removedisabled, setremovedisabled] = useState(false)
   const navigate = useNavigate();
   useEffect(() => {
+    setSepetim([]);
+    console.log("girdi")
     const sepetigetir = async () => {
       const veriler = await getDoc(doc(db, "sepet", currentuser.uid))
       if (veriler.data()) {
@@ -87,11 +76,14 @@ export default function Sepet() {
 
 
 
-  }, [])
+  }, [basketCount])
   console.log(ToplamFiyat)
   const notify = () => {
     toast.success('Ürün Sepetten Kaldırıldı.',
       { position: toast.POSITION.TOP_LEFT })
+  }
+  if (basketCount == 0) {
+    navigate("/")
   }
   const RemoveBasket = async (product_id) => {
     setremovedisabled(true);
@@ -113,7 +105,8 @@ export default function Sepet() {
     setBasketCount(sepetim.length - 1);
     setTimeout(() => {
       setremovedisabled(false);
-    },1000);
+    }, 1000);
+
 
   }
   const urun_arttir = async (product_id) => {
@@ -121,21 +114,33 @@ export default function Sepet() {
     const orjinal_urun_verileri = await getDoc(doc(db, "urunler", product_id))
     let orjinal_fiyat = orjinal_urun_verileri.data().fiyat;
     const ara = sepetim.find(data => data.urun_id === product_id)
-    ara.amount = ara.amount + 1;
-    if (orjinal_fiyat.indexOf('.') != -1 && orjinal_fiyat.split('.')[0].length == 1) {
-      orjinal_fiyat = Number(orjinal_fiyat) * Math.pow(10, orjinal_fiyat.split('.')[1].length)
-      ToplamFiyat.tfiyat = (ToplamFiyat.tfiyat + Number(orjinal_fiyat))
-      setFiyat({ tfiyat: ToplamFiyat.tfiyat, tkargo: ToplamFiyat.tkargo });
-      ara.fiyat = Number(orjinal_fiyat) * ara.amount;
+    if (orjinal_urun_verileri.data().stok >= ara.amount + 1) {
+      ara.amount = ara.amount + 1;
+      if (orjinal_fiyat.indexOf('.') != -1 && orjinal_fiyat.split('.')[0].length == 1) {
+        orjinal_fiyat = Number(orjinal_fiyat) * Math.pow(10, orjinal_fiyat.split('.')[1].length)
+        ToplamFiyat.tfiyat = (ToplamFiyat.tfiyat + Number(orjinal_fiyat))
+        setFiyat({ tfiyat: ToplamFiyat.tfiyat, tkargo: ToplamFiyat.tkargo });
+        ara.fiyat = Number(orjinal_fiyat) * ara.amount;
+      }
+      else {
+        ToplamFiyat.tfiyat = (ToplamFiyat.tfiyat + Number(orjinal_fiyat))
+        setFiyat({ tfiyat: ToplamFiyat.tfiyat, tkargo: ToplamFiyat.tkargo });
+        ara.fiyat = orjinal_fiyat * ara.amount;
+      }
+      setTimeout(() => {
+        setremovedisabled(false);
+      }, 1000);
     }
     else {
-      ToplamFiyat.tfiyat = (ToplamFiyat.tfiyat + Number(orjinal_fiyat))
-      setFiyat({ tfiyat: ToplamFiyat.tfiyat, tkargo: ToplamFiyat.tkargo });
-      ara.fiyat = orjinal_fiyat * ara.amount;
-    }
-    setTimeout(() => {
       setremovedisabled(false);
-    },1000);
+      toast.warning(<div>Ürün stokta bulunmamakta.<br /><div style={{ fontSize: "11px" }}>Şu an için en fazla {ara.amount} Adet alabilirsiniz.</div></div>,
+        {
+          position: toast.POSITION.TOP_CENTER,
+          className: 'toast-message'
+        },
+
+      )
+    }
   }
   const urun_azalt = async (product_id) => {
     setremovedisabled(true);
@@ -144,8 +149,8 @@ export default function Sepet() {
     let orjinal_fiyat = orjinal_urun_verileri.data().fiyat;
     const ara = sepetim.find(data => data.urun_id === product_id)
     ara.amount = ara.amount - 1;
-    console.log(ara.fiyat,orjinal_fiyat)
-    if (ara.amount==0) {
+    console.log(ara.fiyat, orjinal_fiyat)
+    if (ara.amount == 0) {
       RemoveBasket(product_id);
     }
     else {
@@ -163,10 +168,140 @@ export default function Sepet() {
     }
     setTimeout(() => {
       setremovedisabled(false);
-    },1000);
+    }, 1000);
 
 
   }
+  const Odeme_Yap = async () => {
+    const veriler = await getDoc(doc(db, "sepet", currentuser.uid))
+    const sepet_uzunlugu = veriler.data().sepetim.length;
+    if (veriler.data()) {
+      let toplam = 0;
+      let kargotoplam = 0;
+      let uyari = 0;
+      let stokta_olmayanlar = [];
+      let sepet_dizisi = veriler.data().sepetim;
+      //console.log(veriler.data().sepetim.length)
+      veriler.data().sepetim.forEach(async (element, index) => {
+        const find = sepetim.find(data => data.urun_id === element)
+        const veriler = await getDoc(doc(db, "urunler", element))
+        if (veriler.data().stok >= find.amount) {
+          if (veriler.data().fiyat.indexOf('.') == 1) {
+            if (veriler.data().fiyat.split('.')[0].length == 1) {
+
+              toplam = toplam + (Number(veriler.data().fiyat) * Math.pow(10, veriler.data().fiyat.split('.')[1].length) * find.amount)
+
+            }
+            else {
+              toplam = parseFloat(toplam + (parseFloat(veriler.data().fiyat) * find.amount))
+            }
+          }
+          else {
+            toplam = parseFloat(toplam + (parseFloat(veriler.data().fiyat) * find.amount))
+
+          }
+          if (veriler.data().kargo_fiyat.indexOf('.') == 1) {
+            if (veriler.data().kargo_fiyat.split('.')[0].length == 1) {
+              kargotoplam = kargotoplam + Number(veriler.data().kargo_fiyat) * Math.pow(10, veriler.data().kargo_fiyat.split('.')[1].length)
+            }
+            else {
+              kargotoplam = parseFloat(kargotoplam + parseFloat(veriler.data().kargo_fiyat))
+            }
+          }
+          else {
+            kargotoplam = parseFloat(kargotoplam + parseFloat(veriler.data().kargo_fiyat))
+
+          }
+          SetPrice({ tfiyat: toplam, tkargo: kargotoplam, Adetler: sepetim });
+
+        }
+        else {
+          uyari = uyari + 1;
+          stokta_olmayanlar.push(veriler.data().urun_id)
+        }
+        if (index == (sepet_uzunlugu - 1) && uyari > 0) {
+
+          Swal.fire({
+            title: 'Custom animation with Animate.css',
+            title: 'Dikkat',
+            html:
+              '<b>Sepetinizde stokta bulunmayan ürün mevcut.</b><br/><div>Ürün Az önce satın alınmış veya kaldırılmış olabilir.</div><div>Sizin için ürünün sepetinizden kaldırılmasını ister misiniz?</div>',
+            icon: 'warning',
+            showDenyButton: true,
+            denyButtonText: 'Detaylar',
+            showCancelButton: true,
+            confirmButtonText: 'Evet',
+            cancelButtonText: 'Hayır',
+            reverseButtons: true,
+            allowOutsideClick: false,
+            showClass: {
+              popup: 'animate__animated animate__backInUp'
+            },
+            hideClass: {
+              popup: 'animate__animated animate__zoomOutDown'
+            }
+          }).then(async (result) => {
+            if (result.isConfirmed) {
+              let yeni_sepet = [];
+              sepet_dizisi.forEach(element => {
+                const find_product = stokta_olmayanlar.find(data => data === element)
+                if (find_product) {
+                  console.log("Ürün vardı eklenmedi")
+                }
+                else {
+                  yeni_sepet.push(element);
+                }
+              })
+              console.log(yeni_sepet);
+              await updateDoc(doc(db, "sepet", currentuser.uid), {
+                sepetim: yeni_sepet
+              }).catch(e => {
+                console.log(e)
+              })
+
+              window.location.href = "/sepet"
+            }
+            else if (result.isDenied) {
+              let olmayan_urunler = []
+              stokta_olmayanlar.forEach(async (element, index) => {
+                const veriler = await getDoc(doc(db, "urunler", element))
+                if (veriler.exists()) {
+                  olmayan_urunler.push(veriler.data());
+                }
+                if (index == stokta_olmayanlar.length - 1) {
+                  Swal.fire({
+                    title: 'Stok Bilgileri',
+                    html:
+                      '<b>Stokta Bulunmayan Ürünler.</b><br/>' + olmayan_urunler.map((datas,index) => ('<div style={{fontSize:10}}><b>'+(index+1)+' - )</b> '+datas.aciklama +'<br/><div>Kalan Stok : '+datas.stok+'</div>'+'</div>')),
+                    icon: 'warning',
+                    showCancelButton: true,
+                    cancelButtonText: 'Anladım',
+                    allowOutsideClick: false,
+                    showConfirmButton:false,
+                    showClass: {
+                      popup: 'animate__animated animate__backInUp'
+                    },
+                    hideClass: {
+                      popup: 'animate__animated animate__zoomOutDown'
+                    }
+                  })
+                }
+              })
+            }
+          });
+        }
+        else if (index == (sepet_uzunlugu - 1) && uyari == 0) {
+          setBasketCount(sepet_uzunlugu);
+          navigate("/OdemeSayfasi")
+        }
+
+      });
+
+    }
+
+
+  }
+
   return (
 
     <div className="checkout-container">
@@ -178,7 +313,7 @@ export default function Sepet() {
                 <form class="cart-form">
                   <table class="table shop_table shop_table_responsive cart" cellspacing="0">
                     <thead>
-                      <tr style={{textAlign:"center"}}>
+                      <tr style={{ textAlign: "center" }}>
                         <th class="product-thumbnail"> </th>
                         <th class="product-name">Ürün</th>
                         <th class="product-price">Fiyat</th>
@@ -190,7 +325,7 @@ export default function Sepet() {
                     <tbody>
                       {sepetim.length > 0 ?
                         sepetim.map((element, value) => (
-                          <tr class="cart_item">
+                          <tr class="cart_item" ref={animationParent}>
                             <td class="product-thumbnail" data-title="Thumbnail">
                               <a href="/product-single"><img src={element.urun_resim} class="attachment-woocommerce_thumbnail size-woocommerce_thumbnail" alt="" /></a>
                             </td>
@@ -203,18 +338,18 @@ export default function Sepet() {
                               </span>{parseFloat(element.fiyat).toFixed(2)} TL</span>
                             </td>
                             <td class="product-quantity" data-title="Quantity">
-                              <div class="quantity" style={{display:"flex",justifyContent:"center",alignItems:"center",flexDirection:"row",gap:15}}>
+                              <div class="quantity" style={{ display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "row", gap: 15 }}>
                                 <label class="sr-only" >Quantity</label>
-                                <button onClick={()=>{urun_azalt(element.urun_id)}}  class={removedisabled==false ? "increment" : "increment_opacity"} disabled={removedisabled==true ? true : false}>-</button>
+                                <button onClick={() => { urun_azalt(element.urun_id) }} class={removedisabled == false ? "increment" : "increment_opacity"} disabled={removedisabled == true ? true : false}>-</button>
                                 <input disabled type="number" id="quantity_5cc58182489a8" class="input-text qty text" step="1" min="1" max="9" value={element.amount} name="#" title="Qty" size="4" />
-                                <button onClick={()=>{urun_arttir(element.urun_id)}}  class={removedisabled==false ? "increment" : "increment_opacity"} disabled={removedisabled==true ? true : false}>+</button>
+                                <button onClick={() => { urun_arttir(element.urun_id) }} class={removedisabled == false ? "increment" : "increment_opacity"} disabled={removedisabled == true ? true : false}>+</button>
                               </div>
                             </td>
- 
+
                           </tr>
                         ))
 
-                        : <div style={{width:"100%",textAlign:"center"}}>Sepetiniz Boş</div>}
+                        : <div style={{ width: "100%", textAlign: "center" }}>Sepetiniz Boş</div>}
                       <tr>
                         <td colspan="6" class="actions">
                           <div class="coupon">
@@ -241,25 +376,25 @@ export default function Sepet() {
                 <ul class="list-unstyled mb-4">
                   <li class="d-flex justify-content-between pb-2 mb-3">
                     <h5>Ara Toplam</h5>
-                    <span>{ToplamFiyat.tfiyat ? ToplamFiyat.tfiyat.toFixed(2)+" TL"   : "Yükleniyor"}</span>
+                    <span>{ToplamFiyat.tfiyat ? ToplamFiyat.tfiyat.toFixed(2) + " TL" : "Yükleniyor"}</span>
                   </li>
                   <li class="d-flex justify-content-between pb-2 mb-3">
                     <h5>Kargo</h5>
-                    <span>{ToplamFiyat.tkargo==0 ? "Kargo Bedava"   : parseFloat(ToplamFiyat.tkargo).toFixed(2)+" TL"}</span>
+                    <span>{ToplamFiyat.tkargo == 0 ? "Kargo Bedava" : parseFloat(ToplamFiyat.tkargo).toFixed(2) + " TL"}</span>
                   </li>
                   <li class="d-flex justify-content-between pb-2">
                     <h5>Toplam</h5>
                     <span>{parseFloat(ToplamFiyat.tfiyat + ToplamFiyat.tkargo).toFixed(2)} TL</span>
                   </li>
                 </ul>
-                <Link onClick={()=>{SetPrice(ToplamFiyat)}} class="btn btn-main btn-small" to={"/OdemeSayfasi"}>Ödemeye git</Link>
+                <button onClick={() => { Odeme_Yap() }} class="btn btn-main btn-small">Ödemeye git</button>
               </div>
             </div>
           </div>
         </div>
         <div>
-        <ToastContainer />
-      </div>
+          <ToastContainer />
+        </div>
       </section>
     </div>
 

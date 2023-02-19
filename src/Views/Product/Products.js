@@ -10,6 +10,7 @@ import 'react-lazy-load-image-component/src/effects/blur.css';
 import 'react-lazy-load-image-component/src/effects/opacity.css';
 import 'react-lazy-load-image-component/src/effects/black-and-white.css';
 import PlaceholderImage from "../../PlaceHolderİmages/FYKHA.png";
+
 function Products() {
     const params = useParams();
     const [RenkFiltre, setRenkFiltre] = useState([])
@@ -23,6 +24,17 @@ function Products() {
     const [NumaraFiltre, setNumaraFiltre] = useState([])
     const [FilterCheck, setFilterCheck] = useState(false)
     useEffect(() => {
+        document.title = 'x';
+        var cbs = document.getElementsByTagName('input');
+        for (var i = 0; i < cbs.length; i++) {
+            if (cbs[i].type == 'checkbox') {
+                if (cbs[i].name == 'numara_chekcbox' || cbs[i].name == 'renk_checkbox') {
+                    cbs[i].checked = false;
+                }
+            }
+        }
+        setRenkFiltre([])
+        setNumaraFiltre([]);
         setLoading(true);
         setProductData([]);
         setDataSize(0);
@@ -31,7 +43,6 @@ function Products() {
         let renkler = [];
         setAktifButton(params.page.split('=')[1]);
         const getproducts = async () => {
-            //console.log(params)
             const datasize = await getDocs(query(collection(db, "urunler"), where("cinsiyet", "==", params.Cinsiyet)));
             setDataSize(datasize.size);
             let after = datasize.docs[(params.page.split('=')[1] * 12) - 12];
@@ -39,23 +50,23 @@ function Products() {
             //console.log(querySnapshot.size)
             querySnapshot.forEach((doc, index) => {
                 setProductData(data => [...data, doc.data()])
-                let ara = dizi.find(x => x===doc.data().numara)   
-                if(ara){
+                let ara = dizi.find(x => x === doc.data().numara)
+                if (ara) {
                     //console.log("Numara var");
                 }
-                else{
+                else {
                     dizi.push(doc.data().numara);
                 }
-                ara = renkler.find(x => x===doc.data().urun_renk)   
-                if(ara){
+                ara = renkler.find(x => x === doc.data().urun_renk)
+                if (ara) {
                     //console.log("Renk var");
                 }
-                else{
+                else {
                     renkler.push(doc.data().urun_renk);
                 }
 
             });
-            dizi.sort(function(a, b){return a - b});
+            dizi.sort(function (a, b) { return a - b });
             setNumaralar(dizi);
             setRenkler(renkler)
             for (let index = 1; index < (Math.ceil(datasize.size / 12) + 1); index++) {
@@ -64,55 +75,55 @@ function Products() {
             setLoading(false);
         }
         getproducts();
-  
+
     }, [params])
-    const FiltreEkle_Numara=(key)=>{
+    const FiltreEkle_Numara = (key) => {
         const find_no = NumaraFiltre.find(data => data === key)
-        if(find_no){
+        if (find_no) {
             setNumaraFiltre([...NumaraFiltre.filter(data => data !== key)])
             console.log("Numara Çıkarıldı")
         }
-        else{
+        else {
             setNumaraFiltre(data => [...data, key]);
             console.log("Numara Eklendi")
         }
-       
+
     }
-    const FiltreEkle_Renk=(color)=>{
+    const FiltreEkle_Renk = (color) => {
         const find_no = RenkFiltre.find(data => data === color)
-        if(find_no){
+        if (find_no) {
             setRenkFiltre([...RenkFiltre.filter(data => data !== color)])
             console.log("Renk çıkarıldı")
         }
-        else{
+        else {
             setRenkFiltre(data => [...data, color]);
             console.log("Renk Eklendi")
         }
     }
-    const Filtrele = async ()=>{
+    const Filtrele = async () => {
         setLoading(true);
         setProductData([])
         setDataSize(0);
         setKolonSayısı([]);
         let filtrelidizi = [];
-        if(RenkFiltre.length!=0 && NumaraFiltre.length!=0){
-            const querySnapshot = await getDocs(query(collection(db, "urunler"),where("cinsiyet","==",params.Cinsiyet), where("numara", "in",NumaraFiltre),orderBy('urun_id')));
+        if (RenkFiltre.length != 0 && NumaraFiltre.length != 0) {
+            const querySnapshot = await getDocs(query(collection(db, "urunler"), where("cinsiyet", "==", params.Cinsiyet), where("numara", "in", NumaraFiltre), orderBy('urun_id')));
             querySnapshot.forEach(element => {
                 filtrelidizi.push(element.data())
             });
             console.log("Hem Numara Hem Renk Seçildi")
-            let yenidizi =[];
+            let yenidizi = [];
             RenkFiltre.forEach(renk_kodu => {
-        
-                filtrelidizi.filter(item => item.urun_renk===renk_kodu).forEach(elemenlar => {
-                   yenidizi.push(elemenlar);
-               });
-            });      
-                setProductData(yenidizi);
-                setDataSize(yenidizi.length);
+
+                filtrelidizi.filter(item => item.urun_renk === renk_kodu).forEach(elemenlar => {
+                    yenidizi.push(elemenlar);
+                });
+            });
+            setProductData(yenidizi);
+            setDataSize(yenidizi.length);
         }
-        else if(NumaraFiltre.length!=0 && RenkFiltre.length==0) {
-            const querySnapshot = await getDocs(query(collection(db, "urunler"),where("cinsiyet","==",params.Cinsiyet), where("numara", "in",NumaraFiltre),orderBy('urun_id')));
+        else if (NumaraFiltre.length != 0 && RenkFiltre.length == 0) {
+            const querySnapshot = await getDocs(query(collection(db, "urunler"), where("cinsiyet", "==", params.Cinsiyet), where("numara", "in", NumaraFiltre), orderBy('urun_id')));
             querySnapshot.forEach(element => {
                 filtrelidizi.push(element.data())
             });
@@ -120,20 +131,20 @@ function Products() {
             setProductData(filtrelidizi);
             setDataSize(filtrelidizi.length);
         }
-        else{
+        else {
             console.log("Sadece Renk Seçildi")
-            const querySnapshot = await getDocs(query(collection(db, "urunler"),where("cinsiyet","==",params.Cinsiyet), where("urun_renk", "in",RenkFiltre),orderBy('urun_id')));
+            const querySnapshot = await getDocs(query(collection(db, "urunler"), where("cinsiyet", "==", params.Cinsiyet), where("urun_renk", "in", RenkFiltre), orderBy('urun_id')));
             querySnapshot.forEach(element => {
                 filtrelidizi.push(element.data())
             });
             setProductData(filtrelidizi);
             setDataSize(filtrelidizi.length);
-            
+
         }
-      
+
         setTimeout(() => {
-            setLoading(false); 
-         },3000);
+            setLoading(false);
+        }, 3000);
     }
     return (
         <div className="shop-container">
@@ -169,49 +180,53 @@ function Products() {
                                             <div key={value} className="col-lg-4 col-12 col-md-6 col-sm-6 mb-5 border border-dark-0">
                                                 <div className="product">
                                                     <div className="product-wrap">
-                                                        <Link to={"/SingleProduct/"+element.urun_id+"/"+element.urun_markasi}><LazyLoadImage placeholderSrc={PlaceholderImage} width={250} height={350} src={element.urun_resim} alt="product-img" /></Link>
-                                                        <Link to={"/SingleProduct/"+element.urun_id+"/"+element.urun_markasi}><div className="div"><img className="img-second" width="100%" height={150} src={logo} alt="product-img" /></div></Link>
+                                                        <Link to={"/SingleProduct/" + element.urun_id + "/" + element.urun_markasi}><LazyLoadImage placeholderSrc={PlaceholderImage} width={250} height={350} src={element.urun_resim} alt="product-img" /></Link>
+                                                        <Link to={"/SingleProduct/" + element.urun_id + "/" + element.urun_markasi}><div className="div"><img className="img-second" width="100%" height={150} src={logo} alt="product-img" /></div></Link>
                                                     </div>
+                                                    {element.kargo_fiyat == 0 && <span className="kargo_bedava">Kargo Bedava</span>}                               
+                                                    <div className="boxes"> 
+                                                    {element.indirim > 0 && <span class="onsale">İndirimli Ürün</span>}  
+                                                    {element.stok < 20 && <span className="stok"> Tükeniyor</span>}                  
+                                                    </div>                                         
                                                     <div className="product-info">
-                                                        <h2 className="product-title h5 mb-0"><a href="/product-single">{element.aciklama}</a></h2>
+                                                        <h2 className="product-title h5 mb-0">{element.aciklama}</h2>
                                                         <span className="price">
+                                                        {element.indirim > 0 ? 
+                                                            Number(element.fiyat - element.indirim).toFixed(2) + "TL"
+                                                            :
+                                                            element.fiyat + " TL"
+                                                        }
+                                                        </span>
+                                                        {
+                                                        element.indirim > 0 &&                                                          
+                                                        <span className="price_indirim">
+                                                            &nbsp;
                                                             {element.fiyat} TL
                                                         </span>
+                                                       }
                                                     </div>
                                                 </div>
                                             </div>
                                         )
                                     })
-                                    : Loading==true ? 
-                                    <div style={{ width: "100%", height: "100vh", display: "flex",flexDirection:"column", justifyContent: "center", alignItems: "center" }}>
-                                          <Lottie animationData={LoadingAnimation} style={{width:200,height:200}} />
-                                         <h5>Sizin İçin Ürünleri Getiriyoruz.</h5>
-                                    </div> 
-                                    : 
-                                     <div style={{ width: "100%", height: "100vh", display: "flex",flexDirection:"column", justifyContent: "center", alignItems: "center" }}>                                
-                                         <br/>
-                                         <h5>Üzgünüz Veri Bulunamadı.</h5>
-                                      </div>
+                                    : Loading == true ?
+                                        <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                                            <Lottie animationData={LoadingAnimation} style={{ width: 200, height: 200 }} />
+                                            <h5>Sizin İçin Ürünleri Getiriyoruz.</h5>
+                                        </div>
+                                        :
+                                        <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                                            <br />
+                                            <h5>Üzgünüz Veri Bulunamadı.</h5>
+                                        </div>
                                 }
-
-
-
-
-
-
-
-
-
-
-
-
                                 <div className="col-12">
                                     <nav aria-label="Page navigation">
                                         <ul className="pagination">
 
                                             {
-                                                
-                                                Loading==false && KolonSayısı.map((element, index) => (
+
+                                                Loading == false && KolonSayısı.map((element, index) => (
                                                     element == aktifbutton ?
                                                         <li key={index} className="page-item active"><Link className="page-link">{element}</Link></li>
                                                         :
@@ -235,39 +250,40 @@ function Products() {
                                 <section className="widget widget-colors mb-5">
                                     <h3 className="widget-title h4 mb-4">Renge Göre Filtrele</h3>
                                     <ul className="list-inline">
-                                    {Renkler.map((element,index) => {
-                                        return (
-                                        <li key={index} className="list-inline-item mr-4">
-                                        <div className="custom-control custom-checkbox color-checkbox">
-                                            <input onClick={()=>FiltreEkle_Renk(element)} type="checkbox" className="custom-control-input" id={element} />
-                                            <label 
-                                             className={`custom-control-label ${element}`} htmlFor={element}></label>
-                                        </div>                            
-                                        </li>    
-                                        )})}                             
+                                        {Renkler.map((element, index) => {
+                                            return (
+                                                <li key={index} className="list-inline-item mr-4">
+                                                    <div className="custom-control custom-checkbox color-checkbox">
+                                                        <input onClick={() => FiltreEkle_Renk(element)} type="checkbox" name="renk_checkbox" className="custom-control-input" id={element} />
+                                                        <label
+                                                            className={`custom-control-label ${element}`} htmlFor={element}></label>
+                                                    </div>
+                                                </li>
+                                            )
+                                        })}
                                     </ul>
                                 </section>
 
 
                                 <section className="widget widget-sizes mb-5">
-                                    
+
                                     <h3 className="widget-title h4 mb-4">Numaraya Göre Filtrele</h3>
-                                    {Numaralar.map((element,index) => (
-                                    <div key={index} className="custom-control custom-checkbox">
-                                        <input onClick={()=>FiltreEkle_Numara(element)} type="checkbox" className="custom-control-input" id={element} />
-                                        <label className="custom-control-label" htmlFor={element}>{element}</label>
-                                    </div>
+                                    {Numaralar.map((element, index) => (
+                                        <div key={index} className="custom-control custom-checkbox">
+                                            <input onClick={() => FiltreEkle_Numara(element)} type="checkbox" name="numara_chekcbox" className="custom-control-input" id={element} />
+                                            <label className="custom-control-label" htmlFor={element}>{element}</label>
+                                        </div>
                                     ))}
                                 </section>
 
-                                <button type="button" onClick={()=>Filtrele()}  disabled={RenkFiltre.length > 0 || NumaraFiltre.length > 0 ? "" : true}  className="btn btn-black btn-small">Filtrele</button>
+                                <button type="button" onClick={() => Filtrele()} disabled={RenkFiltre.length > 0 || NumaraFiltre.length > 0 ? "" : true} className="btn btn-black btn-small">Filtrele</button>
                             </form>
 
                         </div>
                     </div>
                 </div>
             </section>
-            {setFilterCheck==true && <div>Veri Yok gardaş</div>}
+            {setFilterCheck == true && <div>Veri Yok gardaş</div>}
         </div>
     )
 }

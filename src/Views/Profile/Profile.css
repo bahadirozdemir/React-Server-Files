@@ -1,0 +1,17 @@
+.Profil_Bilgileri{
+    transition: opacity 1s linear;  
+    transform:translate(0);
+    opacity: 1;
+ 
+
+}
+.Profil_Bilgileri_Hidden{
+    transform:translate(9999px);
+    opacity: 0;  
+}
+.profile_error{
+    display: flex;
+    flex-direction: row;
+    gap:15px;
+
+}

@@ -4,6 +4,10 @@ import { Link } from "react-router-dom"
 import RegisterValidation from './Validation/RegisterValidation';
 import classNames from 'classnames'
 import { AuthContext } from "../Context/AuthProvider";
+import { db } from '../config/firebase';
+import {addDoc, collection, doc } from "firebase/firestore";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 function SignUp() {
   const { register } = useContext(AuthContext)
   const { handleChange, handleSubmit, values, errors, touched } = useFormik({
@@ -15,8 +19,15 @@ function SignUp() {
     },
     validationSchema: RegisterValidation
     ,
-    onSubmit: values => {
-      register(values.email, values.password)
+    onSubmit: async(values) => { 
+      register(values.email, values.password,values).then(result=>{
+        if(result == -1){
+          toast.dismiss();
+          toast.error('Üzgünüz.Böyle bir kullanıcı mevcut.Farklı bir e-mail adresi deneyin.',
+          { position: toast.POSITION.TOP_CENTER, className: 'error-toast-message' }
+          )
+        }
+      })
     },
   });
   return (
@@ -98,6 +109,7 @@ function SignUp() {
           </div>
         </div>
       </div>
+      <div><ToastContainer/></div>
     </div>
   )
 }

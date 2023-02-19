@@ -3,6 +3,9 @@ import {createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut} fro
 import {useNavigate} from "react-router-dom";
 import Swal from 'sweetalert2'
 import { auth } from "../config/firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../config/firebase";
+
 export const AuthContext =createContext();
 export const AuthProvider = ({children})=>{
  const navigate = useNavigate();
@@ -11,93 +14,57 @@ export const AuthProvider = ({children})=>{
  const [Price, SetPrice] = useState(0)
     return ( 
     <AuthContext.Provider value={{
+      
       currentuser,setUser,setBasketCount,basketCount,Price,SetPrice,
-      register:async(email,password) =>{
+      register:async(email,password,values) =>{
+    
         try{
-          await createUserWithEmailAndPassword(auth,email, password);
-          Swal.fire({
-            title: 'Uyarı',
-            text: "Başarıyla Kayıt Oldunuz Yönlendiriliyorsunuz.",
-            icon: 'success',
-            confirmButtonColor: '#228B22',
-            confirmButtonText:"Tamam"
-          }).then((result) => {
-            if (result.isConfirmed) {
-              navigate("/")
-            }  
-          })
+         const new_user = await createUserWithEmailAndPassword(auth,email, password);
+            await setDoc(doc(db, "users",new_user.user.uid), {
+              Adres:"",
+              email:values.email,
+              isim_soyisim:values.namesurname,
+              telefon:"",
+              bilgisakla:false,
+              guncelleme_zamani:0,
+            }).then(()=>{
+              navigate("/")   
+            })          
         }
         catch(err)
         {
-          Swal.fire({
-            title: 'Uyarı',
-            text: "Böyle Bir Kullanıcı Zaten Mevcut",
-            icon: 'warning',
-            confirmButtonColor: '#228B22',
-            confirmButtonText:"Tamam"
-          }) 
+           return -1
         }
       },
       giris:async(email,password) =>{
+
         try{
           await signInWithEmailAndPassword(auth,email, password);
-          Swal.fire({
-            title: 'Uyarı',
-            text: "Başarıyla Giriş Yaptınız Yönlendiriliyorsunuz.",
-            icon: 'success',
-            confirmButtonColor: '#228B22',
-            confirmButtonText:"Tamam"
-          }).then((result) => {
-            if (result.isConfirmed) {
-              if(email=="root@gmail.com")
-              {
-                navigate("/")
-              }
-              else
-              {
-                navigate("/")
-              }
-          
-            }  
-          })
+          navigate("/")
         }
         catch(err)
         {
-          Swal.fire({
-            title: 'Uyarı',
-            text: "Üzgünüz E-Mail veya Şifreniz Hatalı",
-            icon: 'warning',
-            confirmButtonColor: '#228B22',
-            confirmButtonText:"Tamam"
-          }) 
+           return -1;
         }
       },
       logout:async()=>{
         try{
           await signOut(auth);
-          setUser(null);
-          Swal.fire({
-            title: 'Uyarı',
-            text: "Başarıyla Çıkış Yaptınız.",
-            icon: 'success',
-            confirmButtonColor: '#228B22',
-            confirmButtonText:"Tamam"
-          }).then((result) => {
-            if (result.isConfirmed) {
-              navigate("/")
+          setUser(null);       
+          navigate("/")
 
-            }  
-          })
         }
         catch(err)
         {
           console.log(err);
         }
       }
+      
       }}>
-    
+ 
     {children}
     </AuthContext.Provider>
+
 
     )
 

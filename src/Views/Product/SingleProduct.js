@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import {doc,setDoc,getDoc} from "firebase/firestore";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import {doc,setDoc,getDoc,updateDoc, collection,getDocs} from "firebase/firestore";
 import LoadingAnimation from "../../Animation/9965-loading-spinner.json";
 import Lottie from "lottie-react";
 import { db } from "../../config/firebase";
@@ -8,14 +8,25 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 import PlaceholderImage from "../../PlaceHolderİmages/FYKHA.jpg";
 import 'react-lazy-load-image-component/src/effects/black-and-white.css';
 import { AuthContext } from "../../Context/AuthProvider";
+import { useFormik } from 'formik';
+import DegerlendirmeValidation from "../Validation/DegerlendirmeValidation"
+import classNames from "classnames";
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
+import { useAutoAnimate } from '@formkit/auto-animate/react'
+import { RiErrorWarningFill } from 'react-icons/ri';
 function SingleProduct() {
+    const [animationParent] = useAutoAnimate()
     const { currentuser, setBasketCount, basketCount} = useContext(AuthContext)
     const [Products, setData] = useState()
     const [Sepet, setSepet] = useState(false)
     const [Loading, setLoading] = useState(true)
     const [SepetLoading, setSepetLoading] = useState(true)
     const [GirisYap, setGirisYap] = useState(false)
+    const [Kverileri, setKverileri] = useState(false)
+    const [Yorumlar, setYorumlar] = useState([])
     const params= useParams();
+    const navigate = useNavigate();
     useEffect(() => {
         const get_product_function = async()=>{
             const docRef = doc(db, "urunler",params.product_id);
@@ -39,47 +50,219 @@ function SingleProduct() {
             setGirisYap(true)
           }
             setSepetLoading(false);
+            //Yorumlar
+            const Yorumlar = await getDoc(doc(db, "Yorumlar",params.product_id));
+            if(Yorumlar.exists()){
+                setYorumlar(Yorumlar.data().yorum)
+            }
+            else{
+                console.log("yorum yok")
+            }
         }
 
         get_product_function();
-
+        const kullanici_getir = async()=>{
+            const K_verileri = await getDoc(doc(db, "users",currentuser.uid));
+            values.namesurname=K_verileri.data().isim_soyisim;
+            values.email=K_verileri.data().email;
+            console.log("verileri getirdim");
+            setKverileri(true);
+        }
+        if(currentuser){
+           kullanici_getir()
+        }
 
      
     }, [])
-    const SepeteEkle=async()=>{
-        setSepetLoading(true);
-        const docRef = doc(db, "sepet",currentuser.uid);
-        const docSnap = await getDoc(docRef);
-        if(docSnap.exists()){
-          let yenisepet = docSnap.data().sepetim;
-          const ara = yenisepet.find(x=>x===params.product_id);
-          if(ara){
- 
-            setSepet(false)
-            yenisepet = yenisepet.filter(data => data !== params.product_id)
-            setBasketCount(basketCount - 1)       
-          }
-          else{
- 
-            setBasketCount(basketCount + 1)
-            setSepet(true)
-            yenisepet.push(params.product_id)
-          }
-          await setDoc(doc(db, "sepet", currentuser.uid), {
-            sepetim:yenisepet
-          });
+    const { handleChange, handleSubmit, values, errors, touched } = useFormik({
+        initialValues: {
+            namesurname: '',
+            email: '',
+            degerlendirme:"",
+        },
+        validationSchema: DegerlendirmeValidation
+        ,
+        onSubmit: async(values,{resetForm}) => {
+            let siparis_check = false;
+            const Siparisler = await getDocs(collection(db, "Siparisler"));
+            Siparisler.forEach((doc) => {           
+                 if(doc.data().siparisveren==currentuser.uid){
+                    if(doc.data().Urunler.find(data=>data===params.product_id)){
+                        siparis_check=true;
+                    }
+                 }
+            });
+            if(siparis_check==true)
+            {
+            let newDate = new Date()
+            let date = newDate.getDate();
+            let month = newDate.getMonth() + 1;
+            let year = newDate.getFullYear();
+            if(month.toString().length==1){
+                month = "0"+month;
+            }
+            if(date.toString().length==1){
+                date="0"+date;
+            }
+            values["yorumtarihi"]=date+"."+month+"."+year;
+            values["yorumyapanid"]=currentuser.uid;
+            values["yorum_saniyesi"]=newDate.getTime();   
+            const Yorumlar = await getDoc(doc(db, "Yorumlar",params.product_id));
+            if(Yorumlar.exists()){
+                let eskiyorumlar = Yorumlar.data().yorum
+                function compare( a, b ) {
+                    if ( a.yorum_saniyesi > b.yorum_saniyesi ){
+                        return -1;
+                    }
+                    if ( a.yorum_saniyesi < b.yorum_saniyesi ){
+                        return 1;
+                    }
+                        return 0;
+                    }
+                eskiyorumlar.sort(compare);
+                const id_ara = eskiyorumlar.find(data => data.yorumyapanid===currentuser.uid)
+                if(id_ara){           
+                    let distance =  newDate.getTime() - id_ara.yorum_saniyesi;   
+                    var diffMin = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    console.log(seconds)
+                    if(diffMin < 6){
+                        toast.dismiss();
+                        toast.warning(<div>5 Dakikada Bir Yorum Yapabilirsiniz.<br/><div style={{fontSize:"11px"}}>Kalan Zaman : {(5 -diffMin)==0 ? (60- seconds) + " Saniye": (5-diffMin) + " Dakika " +(60- seconds) + " Saniye"}</div></div>,
+                        { 
+                          position: toast.POSITION.BOTTOM_CENTER,
+                          className: 'toast-message'
+                        },
+                   
+                        )
+                        resetForm();
+                        return
+                    }
+                    else{
+                        eskiyorumlar = eskiyorumlar.filter(data=>data.yorumyapanid != currentuser.uid)
+                        eskiyorumlar.push(values)
+                        await updateDoc(doc(db,"Yorumlar",params.product_id),{
+                            yorum:eskiyorumlar
+                          }).catch(e=>{
+                            console.log(e)
+                          })
+                          console.log(eskiyorumlar)
+                          setYorumlar(eskiyorumlar)
+                          toast.success('Değerlendirmeniz Başarıyla Güncellendi.',
+                          { 
+                            position: toast.POSITION.BOTTOM_CENTER ,
+                            className: 'toast-message'
+                          },
+
+                          )
+                          resetForm();
+                        
+                    }
+                }
+                else{
+                    eskiyorumlar.push(values)
+                    await updateDoc(doc(db,"Yorumlar",params.product_id),{
+                        yorum:eskiyorumlar
+                      }).catch(e=>{
+                        console.log(e)
+                      })
+                      setYorumlar(eskiyorumlar)
+                      toast.success('Yorumunuz İçin Teşekkür Ederiz.',
+                      { 
+                        position: toast.POSITION.BOTTOM_CENTER ,
+                        className: 'toast-message'
+                      },
+
+                      )
+                      resetForm();
+                }
+            }
+            else 
+            {        
+                    let yorumdizisi = [];
+                    yorumdizisi.push(values)
+                    await setDoc(doc(db, "Yorumlar",params.product_id), {
+                       yorum:yorumdizisi
+                    }).catch(e => {
+                      console.log(e)
+                    })
+                    setYorumlar(yorumdizisi);
+                    toast.success('Yorumunuz İçin Teşekkür Ederiz.',
+                    { position: toast.POSITION.BOTTOM_CENTER })
+                    resetForm();
+
+            }
+        
+         
         }
         else{
-            let yenisepet = []
-            setSepet(true)
- 
-            setBasketCount(1)
-            yenisepet.push(params.product_id)
-            await setDoc(doc(db, "sepet", currentuser.uid), {
-               sepetim:yenisepet
-            });
+            toast.error(<div>Yorum yapabilmek için ürünü satın almanız gerekmektedir.</div>,
+            {
+                position: toast.POSITION.TOP_CENTER,
+                className: 'error-toast-message'
+            }
+            )
+            resetForm();
         }
-      setSepetLoading(false);
+        console.log(siparis_check)
+        },
+
+    });
+ 
+    const SepeteEkle=async()=>{
+        if(currentuser){
+
+            const stok_check = await getDoc(doc(db,"urunler",params.product_id))
+            if(stok_check.data().stok > 0){
+                setSepetLoading(true);
+                const docRef = doc(db, "sepet",currentuser.uid);
+                const docSnap = await getDoc(docRef);
+                if(docSnap.exists()){
+                  let yenisepet = docSnap.data().sepetim;
+                  const ara = yenisepet.find(x=>x===params.product_id);
+                  if(ara){
+         
+                    setSepet(false)
+                    yenisepet = yenisepet.filter(data => data !== params.product_id)
+                    setBasketCount(basketCount - 1)       
+                  }
+                  else{
+         
+                    setBasketCount(basketCount + 1)
+                    setSepet(true)
+                    yenisepet.push(params.product_id)
+                  }
+                  await setDoc(doc(db, "sepet", currentuser.uid), {
+                    sepetim:yenisepet
+                  });
+                }
+                else{
+                    let yenisepet = []
+                    setSepet(true)
+         
+                    setBasketCount(1)
+                    yenisepet.push(params.product_id)
+                    await setDoc(doc(db, "sepet", currentuser.uid), {
+                       sepetim:yenisepet
+                    });
+                }
+              setSepetLoading(false);
+            }
+            else{
+                toast.dismiss();
+                toast.error(<div style={{display:"flex",flexDirection:"column"}}><div>Üzgünüz Ürüne Ait Stok Bulunmamaktadır.</div><div>Ürün satın alınmış veya kaldırılmış olabilir.</div></div>,
+                {
+                    position: toast.POSITION.TOP_CENTER,
+                    className: 'error-toast-message'
+                }
+                )
+            }
+           
+        }
+        else{
+            navigate("/login")
+        }
+        
     }
     return (
         Loading==false && Products!=null > 0 ? 
@@ -109,21 +292,26 @@ function SingleProduct() {
             
                         <hr />
                         
-                        <h3 className="product-price">{Products.fiyat} TL</h3>
-                        
+                        <h3 className="product-price">{Products.indirim==0 ?  Products.fiyat : parseFloat(Products.fiyat - Products.indirim).toFixed(2)} TL {Products.stok==0 && <div style={{color:"red",fontWeight:"bold",fontSize:25}}><RiErrorWarningFill size={25} color="red"/> Tükendi</div>} {Products.stok==1 && <div style={{color:"#DFBD69",fontWeight:"bold",fontSize:25}}><RiErrorWarningFill size={25} color="#DFBD69"/> Son 1 Ürün</div>}</h3>               
                         <p className="product-description my-4 ">
                           
                         </p>
             
-                        <form className="cart">
+                        <div className="cart">
                         <div className="quantity d-flex align-items-center"> 
-                        <button onClick={()=>SepeteEkle()} className="btn btn-main btn-small" disabled={GirisYap==true ? true : SepetLoading==true ? true : ""}>{SepetLoading==false ? GirisYap==true ? "Lütfen Giriş Yapın" : Sepet==false ?  "Sepete Ekle" : "Sepetten Çıkar" : "Yükleniyor"}</button>
+                        <button onClick={()=>SepeteEkle()} className="btn btn-main btn-small" disabled={Products.stok > 0 ? SepetLoading==true ? true : "" : true}>{SepetLoading==false ? Sepet==false ?  "Sepete Ekle" : "Sepetten Çıkar" : "Yükleniyor"}</button>
                         </div>
-                        </form>               
+                        </div>               
                         <div className="color-swatches mt-4 d-flex align-items-center">
                         <span className="font-weight-bold text-capitalize product-meta-title">Renk</span>
                         <ul className="list-inline mb-0">
                            <li>{Products.urun_renk}</li>                        
+                        </ul>
+                        </div>
+                        <div className="color-swatches mt-4 d-flex align-items-center">
+                        <span className="font-weight-bold text-capitalize product-meta-title">Stok</span>
+                        <ul className="list-inline mb-0">
+                           <li>{Products.stok > 0 ?  "Mevcut" : "Stokta Yok"}</li>                        
                         </ul>
                         </div>
             
@@ -139,6 +327,7 @@ function SingleProduct() {
                             <span className="font-weight-bold text-capitalize product-meta-title">Kategori</span>
                             <Link href="#">Ayakkabı</Link>
                         </div>
+                        
             
                         <div className="product-share mt-5">
                             <ul className="list-inline">
@@ -168,7 +357,7 @@ function SingleProduct() {
                         <div className="nav nav-tabs nav-fill" id="nav-tab" role="tablist">
                         <a className="nav-item nav-link active" id="nav-home-tab" data-toggle="tab" href="#nav-home" role="tab" aria-controls="nav-home" aria-selected="true">Açıklama</a>
                         <a className="nav-item nav-link" id="nav-profile-tab" data-toggle="tab" href="#nav-profile" role="tab" aria-controls="nav-profile" aria-selected="false">Ek Bilgiler</a>
-                        <a className="nav-item nav-link" id="nav-contact-tab" data-toggle="tab" href="#nav-contact" role="tab" aria-controls="nav-contact" aria-selected="false">Değerlendirmeler (2)</a>
+                        <a className="nav-item nav-link" id="nav-contact-tab" data-toggle="tab" href="#nav-contact" role="tab" aria-controls="nav-contact" aria-selected="false">Değerlendirmeler ({Yorumlar.length})</a>
                         </div>
                     </nav>
             
@@ -213,56 +402,78 @@ function SingleProduct() {
                         </div>
                         <div className="tab-pane fade" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab">
                         <div className="row">
-                        <div className="col-lg-7">
-                            <div className="media review-block mb-4">
-                            <img src="assets/images/avater-1.jpg" alt="reviewimg" className="img-fluid mr-4" />
+                        <div
+                        className={classNames({
+                            "col-lg-7": true,
+                            "col-lg-7 degerlendirmeclass": Yorumlar.length==0
+                        })} >
+                        {Yorumlar.length > 0 ? 
+                        Yorumlar.map((element,value)=>(
+                            <div key={value} className="media review-block mb-4" ref={animationParent} >
                             <div className="media-body">
-                                <div className="product-review">
-                                <span><i className="tf-ion-android-star"></i></span>
-                                <span><i className="tf-ion-android-star"></i></span>
-                                <span><i className="tf-ion-android-star"></i></span>
-                                <span><i className="tf-ion-android-star"></i></span>
-                                <span><i className="tf-ion-android-star"></i></span>
-                                </div>
-                                <h6>Therichpost <span className="text-sm text-muted font-weight-normal ml-3">-June 23, 2019</span></h6>
-                                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ipsum suscipit consequuntur in, perspiciatis laudantium ipsa fugit. Iure esse saepe error dolore quod.</p>
+                                <h6>{element.namesurname}<span className="text-sm text-muted font-weight-normal ml-3">{element.yorumtarihi}</span></h6>
+                                <p>{element.degerlendirme}</p>
                             </div>  
                             </div>
+                        ))                    
+                          : <div style={{width:"100%",textAlign:"center",fontWeight:"bold",fontSize:18,height:"50px"}}>Henüz Değerlendirme Yapılmamış</div>}
+                            
+                            
             
-                            <div className="media review-block">
-                            <img src="assets/images/avater-2.jpg" alt="reviewimg" className="img-fluid mr-4" />
-                            <div className="media-body">
-                                <div className="product-review">
-                                <span><i className="tf-ion-android-star"></i></span>
-                                <span><i className="tf-ion-android-star"></i></span>
-                                <span><i className="tf-ion-android-star"></i></span>
-                                <span><i className="tf-ion-android-star"></i></span>
-                                <span><i className="tf-ion-android-star-outline"></i></span>
-                                </div>
-                                <h6>Therichpost <span className="text-sm text-muted font-weight-normal ml-3">-June 23, 2019</span></h6>
-                                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ipsum suscipit consequuntur in, perspiciatis laudantium ipsa fugit. Iure esse saepe error dolore quod.</p>
-                            </div>  
-                            </div>
+                        
                         </div>
             
             
                         <div className="col-lg-5">
                             <div className="review-comment mt-5 mt-lg-0">
-                            <h4 className="mb-3">Yorum Ekleyin</h4>
+                            <h4 className="mb-3">{currentuser ? "Yorum Ekleyin" :"Yorum eklemek için giriş yapın"}</h4>
             
-                            <form>
+                            <form onSubmit={handleSubmit}>
                                 <div className="starrr"></div>
                                 <div className="form-group">
-                                <input type="text" className="form-control" placeholder="Adınız" />
+                                <input
+                                name='namesurname'
+                                type="text"
+                                className={classNames({
+                                    "form-control": true,
+                                    "form-control border border-danger": errors.namesurname && touched.namesurname
+                                })}
+                                placeholder="Adınız ve Soyadınız"
+                                onChange={handleChange}
+                                value={values.namesurname}
+                                disabled={true}
+                            />                        
                                 </div>
                                 <div className="form-group">
-                                <input type="email" className="form-control" placeholder="E-Mail Adresiniz" />
+                                <input
+                                name='email'
+                                type="text"
+                                className={classNames({
+                                    "form-control": true,
+                                    "form-control border border-danger": errors.email && touched.email
+                                })}
+                                placeholder="E-Mail Adresiniz"
+                                onChange={handleChange}
+                                value={values.email}
+                                disabled={true}
+                               /> 
                                 </div>
                                 <div className="form-group">
-                                <textarea name="comment" id="comment" className="form-control" cols="30" rows="4" placeholder="Değerlendirmeniz"></textarea>
+                                <textarea name="degerlendirme" id="comment"    
+                                className={classNames({
+                                    "form-control": true,
+                                    "form-control border border-danger": errors.degerlendirme && touched.degerlendirme
+                                })}
+                                 cols="30" 
+                                 rows="4" 
+                                 placeholder="Değerlendirmeniz"
+                                 onChange={handleChange}
+                                 value={values.degerlendirme}
+                                 disabled={currentuser ? false : true}
+                                 ></textarea>
                                 </div>
             
-                                <Link to="/product-single" className="btn btn-main btn-small">Gönder</Link>
+                                <button type="submit" to="/product-single" className="btn btn-main btn-small" disabled={values.degerlendirme!="" && values.email!="" && values.namesurname!="" ? false : true}>Gönder</button>
                             </form>
                             </div>
                         </div>
@@ -272,6 +483,9 @@ function SingleProduct() {
                     </div>
                 </div>
                 </div>
+                <div>
+                <ToastContainer />
+               </div>
             </section>
             
             
