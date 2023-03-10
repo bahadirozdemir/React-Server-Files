@@ -18,7 +18,7 @@ import { useContext,useEffect,useState} from "react";
 import { AuthContext } from "../../Context/AuthProvider";
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentValidation from "../Validation/PaymentValidation";
-import {doc,deleteDoc,addDoc, collection, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {doc,deleteDoc,addDoc, collection, getDoc, query, updateDoc, where, getDocs } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import Swal from 'sweetalert2'
 export default function Odeme() {
@@ -29,7 +29,6 @@ export default function Odeme() {
   const [Bilgiler, setBilgiler] = useState(true)
   const navigate = useNavigate();
   useEffect(() => {
-  
     const kullanici_bilgileri_getir=async()=>{
       const kullanici_bilgileri = await getDoc(doc(db,"users",currentuser.uid))
       if(kullanici_bilgileri.exists()){
@@ -60,6 +59,7 @@ export default function Odeme() {
       St:"",
       CVV:"",
       Stok:true,
+      SiparisDurumu:"Hazırlanıyor",
 
     },
     validationSchema:PaymentValidation
@@ -101,8 +101,20 @@ export default function Odeme() {
             if(Minutes.toString().length==1){
               Minutes="0"+Minutes;
             }
+            if(Price.Kupon_kodu!=""){
+              const Kupon_Bilgileri = await getDocs(query(collection(db, "Kuponlar"),where("kullanici_id","array-contains",currentuser.uid),where("kupon_kodu","==",Price.Kupon_kodu)));
+              Kupon_Bilgileri.forEach(async(element) => {
+                let dizi = element.data().kullanici_id;
+                dizi = dizi.filter(data=>data !== currentuser.uid)
+                await updateDoc(doc(db,"Kuponlar",element.id),{
+                  kullanici_id:dizi
+                }).catch(e=>{
+                  console.log(e)
+                })
+              });
+            }
             await addDoc(collection(db, "Siparisler"), {
-              isim:values.isim + values.Soyisim,
+              isim:values.isim,
               adres:values.Adres,
               email:values.email,
               telefon:values.telefon,
@@ -184,7 +196,6 @@ export default function Odeme() {
      values.isim=Bilgiler.isim_soyisim
      values.email=Bilgiler.email
      values.telefon=Bilgiler.telefon
-     console.log("Bilgiler Ayarlandı")
   }
   return (
     <MDBContainer className="py-5">

@@ -2,7 +2,7 @@ import 'animate.css';
 import Swal from 'sweetalert2'
 import { useNavigate, Link } from "react-router-dom";
 import React, { useEffect, useContext, useState } from "react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, updateDoc,query,where} from "firebase/firestore";
 import { AuthContext } from "../../Context/AuthProvider";
 import { db } from "../../config/firebase";
 import LoadingBasket from "../../Animation/sepet_loading.json";
@@ -14,6 +14,9 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAutoAnimate } from '@formkit/auto-animate/react'
 import "./Sepet.css"
+import {
+  MDBBadge
+} from 'mdb-react-ui-kit';
 export default function Sepet() {
   const [animationParent] = useAutoAnimate()
   const { currentuser, setBasketCount, SetPrice, basketCount } = useContext(AuthContext)
@@ -22,10 +25,11 @@ export default function Sepet() {
   const [ToplamFiyat, setFiyat] = useState(0)
   const [ImageLoading, setImageLoading] = useState(false)
   const [removedisabled, setremovedisabled] = useState(false)
+  const [Kupon, setKupon] = useState("")
+  const [KuponBilgileri, setKuponBilgileri] = useState({KuponFiyati:0,KuponKodu:""})
   const navigate = useNavigate();
   useEffect(() => {
     setSepetim([]);
-    console.log("girdi")
     const sepetigetir = async () => {
       const veriler = await getDoc(doc(db, "sepet", currentuser.uid))
       if (veriler.data()) {
@@ -77,7 +81,7 @@ export default function Sepet() {
 
 
   }, [basketCount])
-  console.log(ToplamFiyat)
+ 
   const notify = () => {
     toast.success('Ürün Sepetten Kaldırıldı.',
       { position: toast.POSITION.TOP_LEFT })
@@ -101,7 +105,6 @@ export default function Sepet() {
     let yenisepet = sepetim.filter(data => data.urun_id != product_id)
     setSepetim(yenisepet);
     notify();
-    console.log("Ürün Kaldırıldı")
     setBasketCount(sepetim.length - 1);
     setTimeout(() => {
       setremovedisabled(false);
@@ -149,7 +152,6 @@ export default function Sepet() {
     let orjinal_fiyat = orjinal_urun_verileri.data().fiyat;
     const ara = sepetim.find(data => data.urun_id === product_id)
     ara.amount = ara.amount - 1;
-    console.log(ara.fiyat, orjinal_fiyat)
     if (ara.amount == 0) {
       RemoveBasket(product_id);
     }
@@ -171,6 +173,48 @@ export default function Sepet() {
     }, 1000);
 
 
+  }
+  const Kupon_Uygulama = async()=>{
+ 
+    if(Kupon!=""){
+      let check = 0;
+      const Check_Kupon = await getDocs(query(collection(db, "Kuponlar"),where("kullanici_id", "array-contains", currentuser.uid)));
+      if(Check_Kupon.size > 0){
+      Check_Kupon.docs.forEach((element,value) => {
+         if(element.data().kupon_kodu == Kupon){
+          toast.dismiss();
+          toast.success('Kupon Uygulandı.',
+          { position: toast.POSITION.TOP_CENTER , className: 'error-toast-message'})
+   
+          if(element.data().indirim.split("-")[1]=="TL"){
+            setFiyat({ tfiyat: ToplamFiyat.tfiyat - element.data().indirim.split("-")[0], tkargo:ToplamFiyat.tkargo})
+            setKuponBilgileri({KuponFiyati:element.data().indirim.split("-")[0],KuponKodu:element.data().kupon_kodu})
+          }
+          else{
+            let yeni_fiyat = parseFloat((ToplamFiyat.tfiyat*element.data().indirim.split("-")[0])/100).toFixed(2);
+            setKuponBilgileri({KuponFiyati:yeni_fiyat,KuponKodu:element.data().kupon_kodu})
+            setFiyat({ tfiyat: ToplamFiyat.tfiyat - yeni_fiyat, tkargo:ToplamFiyat.tkargo})
+          }
+          check=check+1;
+         }
+        if(value==(Check_Kupon.size-1) && check==0){
+            toast.dismiss();
+            toast.error('Geçersiz Kupon.',
+            { position: toast.POSITION.TOP_CENTER, className: 'error-toast-message' })
+            setKupon("");       
+        }
+       
+  
+      });
+                
+      }
+      else {
+        toast.dismiss();
+        toast.error('Geçersiz Kupon.',
+        { position: toast.POSITION.TOP_CENTER, className: 'error-toast-message' })
+        setKupon("");       
+      }
+    }
   }
   const Odeme_Yap = async () => {
     const veriler = await getDoc(doc(db, "sepet", currentuser.uid))
@@ -212,7 +256,7 @@ export default function Sepet() {
             kargotoplam = parseFloat(kargotoplam + parseFloat(veriler.data().kargo_fiyat))
 
           }
-          SetPrice({ tfiyat: toplam, tkargo: kargotoplam, Adetler: sepetim });
+          SetPrice({ tfiyat: (toplam-KuponBilgileri.KuponFiyati), tkargo: kargotoplam, Adetler: sepetim,Kupon_kodu:KuponBilgileri.KuponKodu});
 
         }
         else {
@@ -246,7 +290,7 @@ export default function Sepet() {
               sepet_dizisi.forEach(element => {
                 const find_product = stokta_olmayanlar.find(data => data === element)
                 if (find_product) {
-                  console.log("Ürün vardı eklenmedi")
+                  // console.log("Ürün vardı eklenmedi")
                 }
                 else {
                   yeni_sepet.push(element);
@@ -310,7 +354,7 @@ export default function Sepet() {
           <div class="row justify-content-center">
             <div class="col-lg-12">
               <div class="product-list">
-                <form class="cart-form">
+                <form class="cart-form" >
                   <table class="table shop_table shop_table_responsive cart" cellspacing="0">
                     <thead>
                       <tr style={{ textAlign: "center" }}>
@@ -327,7 +371,7 @@ export default function Sepet() {
                         sepetim.map((element, value) => (
                           <tr class="cart_item" ref={animationParent}>
                             <td class="product-thumbnail" data-title="Thumbnail">
-                              <a href="/product-single"><img src={element.urun_resim} class="attachment-woocommerce_thumbnail size-woocommerce_thumbnail" alt="" /></a>
+                              <Link to={"/SingleProduct/" + element.urun_id + "/" + element.urun_markasi}><img src={element.urun_resim} class="attachment-woocommerce_thumbnail size-woocommerce_thumbnail" alt="" /></Link>
                             </td>
                             <td class="product-name" data-title="Product">
                               <a href="#">{element.aciklama}</a>
@@ -352,13 +396,12 @@ export default function Sepet() {
                         : <div style={{ width: "100%", textAlign: "center" }}>Sepetiniz Boş</div>}
                       <tr>
                         <td colspan="6" class="actions">
+                          {KuponBilgileri.KuponFiyati==0 &&
                           <div class="coupon">
-                            <input type="text" name="coupon_code" class="input-text form-control" id="coupon_code" value="" placeholder="Kupon Kodunuz" />
-                            <button type="button" class="btn btn-black btn-small" name="apply_coupon" value="Apply coupon">Kuponu Uygula</button>
-                            {/* <span class="float-right mt-3 mt-lg-0">
-                              <button type="button" class="btn btn-dark btn-small" name="update_cart" value="Update cart" disabled="">Update cart</button>
-                            </span> */}
+                            <input type="text" name="coupon_code" class="input-text form-control" id="coupon_code" onChange={(e)=>setKupon(e.target.value)} value={Kupon} placeholder="Kupon Kodunuz" />
+                            <button onClick={()=>Kupon_Uygulama()} type="button" class="btn btn-black btn-small" name="apply_coupon" value="Apply coupon">Kuponu Uygula</button>
                           </div>
+                          }
                           <input type="hidden" id="woocommerce-cart-nonce" name="woocommerce-cart-nonce" value="27da9ce3e8" />
                           <input type="hidden" name="_wp_http_referer" value="/cart/" />
                         </td>
@@ -370,11 +413,18 @@ export default function Sepet() {
             </div>
           </div>
           <div class="row justify-content-end">
+            
             <div class="col-lg-4">
+              
               <div class="cart-info card p-4 mt-4">
+                
                 <h4 class="mb-4">Sepet Toplamı</h4>
+                {KuponBilgileri.KuponFiyati!=0 &&
+                <MDBBadge style={{display:"flex",justifyContent:"center",alignItems:"center",width:"300px",height:"30px",marginBottom:15}} color='Success' light><div>Kupon Uygulandı Kazancınız : {KuponBilgileri.KuponFiyati} TL</div></MDBBadge>}
                 <ul class="list-unstyled mb-4">
+                  
                   <li class="d-flex justify-content-between pb-2 mb-3">
+                    
                     <h5>Ara Toplam</h5>
                     <span>{ToplamFiyat.tfiyat ? ToplamFiyat.tfiyat.toFixed(2) + " TL" : "Yükleniyor"}</span>
                   </li>

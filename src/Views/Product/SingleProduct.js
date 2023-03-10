@@ -34,9 +34,6 @@ function SingleProduct() {
             if(docSnap.exists()){
                 setData(docSnap.data())
             }
-            else{
-               console.log("data yok")
-            }
             setLoading(false);
             if(currentuser!=null){
             const check = await getDoc(doc(db, "sepet",currentuser.uid))
@@ -55,9 +52,6 @@ function SingleProduct() {
             if(Yorumlar.exists()){
                 setYorumlar(Yorumlar.data().yorum)
             }
-            else{
-                console.log("yorum yok")
-            }
         }
 
         get_product_function();
@@ -65,7 +59,6 @@ function SingleProduct() {
             const K_verileri = await getDoc(doc(db, "users",currentuser.uid));
             values.namesurname=K_verileri.data().isim_soyisim;
             values.email=K_verileri.data().email;
-            console.log("verileri getirdim");
             setKverileri(true);
         }
         if(currentuser){
@@ -73,7 +66,7 @@ function SingleProduct() {
         }
 
      
-    }, [])
+    }, [navigate])
     const { handleChange, handleSubmit, values, errors, touched } = useFormik({
         initialValues: {
             namesurname: '',
@@ -87,7 +80,7 @@ function SingleProduct() {
             const Siparisler = await getDocs(collection(db, "Siparisler"));
             Siparisler.forEach((doc) => {           
                  if(doc.data().siparisveren==currentuser.uid){
-                    if(doc.data().Urunler.find(data=>data===params.product_id)){
+                    if(doc.data().Urunler.find(data=>data.Urun_No===params.product_id)){
                         siparis_check=true;
                     }
                  }
@@ -125,7 +118,6 @@ function SingleProduct() {
                     let distance =  newDate.getTime() - id_ara.yorum_saniyesi;   
                     var diffMin = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                     var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                    console.log(seconds)
                     if(diffMin < 6){
                         toast.dismiss();
                         toast.warning(<div>5 Dakikada Bir Yorum Yapabilirsiniz.<br/><div style={{fontSize:"11px"}}>Kalan Zaman : {(5 -diffMin)==0 ? (60- seconds) + " Saniye": (5-diffMin) + " Dakika " +(60- seconds) + " Saniye"}</div></div>,
@@ -146,7 +138,6 @@ function SingleProduct() {
                           }).catch(e=>{
                             console.log(e)
                           })
-                          console.log(eskiyorumlar)
                           setYorumlar(eskiyorumlar)
                           toast.success('Değerlendirmeniz Başarıyla Güncellendi.',
                           { 
@@ -204,7 +195,6 @@ function SingleProduct() {
             )
             resetForm();
         }
-        console.log(siparis_check)
         },
 
     });
@@ -276,7 +266,7 @@ function SingleProduct() {
                         <div className="carousel slide" data-ride="carousel" id="single-product-slider">
                         <div className="carousel-inner">
                             <div className="carousel-item active">
-                            <LazyLoadImage effect="black-and-white" placeholderSrc={PlaceholderImage} width={250} height={420} src={Products.urun_resim} alt="product-img" />
+                            <LazyLoadImage effect="black-and-white" placeholderSrc={PlaceholderImage} width={350} src={Products.urun_resim} alt="product-img" />
                             </div>
                         </div>                 
                         </div>

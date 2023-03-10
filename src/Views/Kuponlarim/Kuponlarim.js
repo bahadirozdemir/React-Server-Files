@@ -23,11 +23,6 @@ export default function App() {
             });
         });
       }
-      else{
-        console.log("sipariş yok")
-      }
-    
- 
 
     setLoading(false);
 

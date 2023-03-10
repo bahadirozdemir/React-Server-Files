@@ -10,8 +10,8 @@ export default function PreviewImage({file}){
     }
    }
    return (
-    <div style={{display:"flex",justifyContent:"center",alignItems:"center"}}>
-        <img style={{width:"70px"}} src={preview} alt=""/>
+    <div style={{display:"flex",justifyContent:"center",alignItems:"center",marginLeft:30}}>
+        <img style={{width:"100px",height:"auto"}} src={preview} alt=""/>
     </div>
    )
 }

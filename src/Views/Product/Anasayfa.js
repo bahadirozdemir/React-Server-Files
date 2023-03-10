@@ -27,7 +27,7 @@ function Home() {
     return (
         <div className="home-container">
             <div className="main-slider slider slick-initialized slick-slider">
-                <div className="slider-item" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1514388614019-c755c395185c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxleHBsb3JlLWZlZWR8MXx8fGVufDB8fHx8&w=1000&q=80')", backgroundPosition: "center", backgroundRepeat: "no-repeat" }}>
+                <div className="slider-item" style={{ backgroundImage: "url('https://thumbs.dreamstime.com/b/heart-shape-shoe-laces-gray-mesh-fabric-sneakers-over-bright-yellow-background-laced-up-stylish-textile-sport-shoes-wide-232319408.jpg')", backgroundPosition: "center", backgroundRepeat: "no-repeat" }}>
                     <div className="container">
                         <div className="row">
                             <div className="col-lg-6 col-12 offset-lg-6 offset-md-6">
@@ -40,6 +40,7 @@ function Home() {
                         </div>
                     </div>
                 </div>
+                
             </div>
             <section className="category section pt-3 pb-0">
 

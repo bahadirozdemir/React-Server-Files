@@ -45,7 +45,6 @@ function DetailPage() {
 
     }
     getir();
-    console.log("veriler geldi")
   }, [])
  const AddBasket=async()=>{
        setaddLoading(true);
@@ -56,7 +55,6 @@ function DetailPage() {
           const ara = sepetdizi.find(sepetverileri => sepetverileri===params.product_id)
           if(ara){
             sepetdizi=[...sepetdizi.filter(data => data !== params.product_id)]
-            console.log("sepetten kaldırdık")
             setBasketCount(basketCount-1);
             setCheckBasketButton(false);
             await updateDoc(doc(db,"sepet",currentuser.uid),{
@@ -67,7 +65,6 @@ function DetailPage() {
           }
           else{
             sepetdizi.push(params.product_id);
-            console.log("güncelledik")
             setBasketCount(basketCount+1);
             setCheckBasketButton(true);
             await updateDoc(doc(db,"sepet",currentuser.uid),{
@@ -81,7 +78,6 @@ function DetailPage() {
         else{
           let sepetdizi = [];
           sepetdizi.push(params.product_id);
-          console.log("sıfırdan ekledik")
           setBasketCount(basketCount+1);
           setCheckBasketButton(true);
           await setDoc(doc(db, "sepet",currentuser.uid), {

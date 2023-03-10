@@ -1,0 +1,43 @@
+.kuponlar_kapsayici{
+    padding:25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+     
+}
+.kuponlar_kapsayicisi{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap:25px;
+    justify-content:flex-start;
+    align-items: center;
+    width:1350px;
+}
+.middle{
+    justify-content: center;
+}
+.no_data_found{
+    height:500px;
+    width:500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+}
+.private{
+   background:#fb5c42;
+   color:"white";
+   display: flex;
+   justify-content:space-between;
+}
+.blink_me {
+    animation: blinker 2s linear infinite;
+  }
+  
+  @keyframes blinker {
+    50% {
+      opacity: 0;
+    }
+  }

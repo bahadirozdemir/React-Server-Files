@@ -12,8 +12,6 @@ import * as Yup from 'yup'
 import Swal from 'sweetalert2'
 import uuid from 'react-uuid';
 const Admin = () => {
-
-
   const [id, setid] = useState()
   const [KargoDurum, setKargoDurum] = useState(false)
   const [disable_form, setDisable_Form] = useState(false)
@@ -89,7 +87,7 @@ const Admin = () => {
     { value: 'Beyaz', label: 'Beyaz' },
     { value: 'Turuncu', label: 'Turuncu' },
     { value: 'Pembe', label: 'Pembe' },
-    { value: 'Mor', label: 'Mor' },
+    { value: 'Mor', label: 'Mor' }
   ]
 
   const UrunTurleri = [

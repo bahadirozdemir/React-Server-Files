@@ -17,6 +17,9 @@ export default function AuthLayout() {
     
     return <Navigate to="/" replace />
   }
+  else if(currentuser==null){
+    return <Navigate to="/" replace />
+  }
 
   
 

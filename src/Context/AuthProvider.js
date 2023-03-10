@@ -27,6 +27,8 @@ export const AuthProvider = ({children})=>{
               telefon:"",
               bilgisakla:false,
               guncelleme_zamani:0,
+              son_aktiflik:0,
+              ban_suresi:0,
             }).then(()=>{
               navigate("/")   
             })          

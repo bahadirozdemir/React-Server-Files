@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { collection, doc, getDocs, query, orderBy, limit, startAt, where } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import LoadingBasket from "../../Animation/74644-add-to-basket.json";
@@ -13,6 +13,7 @@ import PlaceholderImage from "../../PlaceHolderİmages/FYKHA.png";
 
 function Products() {
     const params = useParams();
+    const location = useLocation();
     const [RenkFiltre, setRenkFiltre] = useState([])
     const [Renkler, setRenkler] = useState([])
     const [Numaralar, setNumaralar] = useState([])
@@ -23,29 +24,31 @@ function Products() {
     const [Loading, setLoading] = useState(true)
     const [NumaraFiltre, setNumaraFiltre] = useState([])
     const [FilterCheck, setFilterCheck] = useState(false)
+    const [URL, setURL] = useState("")
     useEffect(() => {
-        document.title = 'x';
-        var cbs = document.getElementsByTagName('input');
-        for (var i = 0; i < cbs.length; i++) {
-            if (cbs[i].type == 'checkbox') {
-                if (cbs[i].name == 'numara_chekcbox' || cbs[i].name == 'renk_checkbox') {
-                    cbs[i].checked = false;
+        document.title="FYKHA | "+params.Cinsiyet + " Ürünleri";
+        const getproducts = async () => {
+            var cbs = document.getElementsByTagName('input');
+            for (var i = 0; i < cbs.length; i++) {
+                if (cbs[i].type == 'checkbox') {
+                    if (cbs[i].name == 'numara_chekcbox' || cbs[i].name == 'renk_checkbox') {
+                        cbs[i].checked = false;
+                    }
                 }
             }
-        }
-        setRenkFiltre([])
-        setNumaraFiltre([]);
-        setLoading(true);
-        setProductData([]);
-        setDataSize(0);
-        setKolonSayısı([]);
-        let dizi = []
-        let renkler = [];
-        setAktifButton(params.page.split('=')[1]);
-        const getproducts = async () => {
+            setRenkFiltre([])
+            setNumaraFiltre([]);
+            setLoading(true);
+            setProductData([]);
+            setDataSize(0);
+            setKolonSayısı([]);
+            let dizi = []
+            let renkler = [];
+            setAktifButton(params.page.split('=')[1]);
+            setURL(location.pathname)
             const datasize = await getDocs(query(collection(db, "urunler"), where("cinsiyet", "==", params.Cinsiyet)));
             setDataSize(datasize.size);
-            let after = datasize.docs[(params.page.split('=')[1] * 12) - 12];
+            let after = datasize.docs[(params.page.split('=')[1] * 12) - 12];        
             const querySnapshot = await getDocs(query(collection(db, "urunler"), where("cinsiyet", "==", params.Cinsiyet), orderBy("urun_id"), startAt(after), limit(12)));
             //console.log(querySnapshot.size)
             querySnapshot.forEach((doc, index) => {
@@ -74,18 +77,23 @@ function Products() {
             }
             setLoading(false);
         }
-        getproducts();
+        if(ProductsData.length==0){     
+            getproducts();  
+         }
+         else if(ProductsData.length > 0 && URL!=location.pathname){
+            getproducts();      
+         }
 
     }, [params])
     const FiltreEkle_Numara = (key) => {
         const find_no = NumaraFiltre.find(data => data === key)
         if (find_no) {
             setNumaraFiltre([...NumaraFiltre.filter(data => data !== key)])
-            console.log("Numara Çıkarıldı")
+         
         }
         else {
             setNumaraFiltre(data => [...data, key]);
-            console.log("Numara Eklendi")
+         
         }
 
     }
@@ -93,11 +101,11 @@ function Products() {
         const find_no = RenkFiltre.find(data => data === color)
         if (find_no) {
             setRenkFiltre([...RenkFiltre.filter(data => data !== color)])
-            console.log("Renk çıkarıldı")
+           
         }
         else {
             setRenkFiltre(data => [...data, color]);
-            console.log("Renk Eklendi")
+          
         }
     }
     const Filtrele = async () => {
@@ -111,7 +119,7 @@ function Products() {
             querySnapshot.forEach(element => {
                 filtrelidizi.push(element.data())
             });
-            console.log("Hem Numara Hem Renk Seçildi")
+    
             let yenidizi = [];
             RenkFiltre.forEach(renk_kodu => {
 
@@ -127,12 +135,12 @@ function Products() {
             querySnapshot.forEach(element => {
                 filtrelidizi.push(element.data())
             });
-            console.log("Sadece Numara Seçildi")
+        
             setProductData(filtrelidizi);
             setDataSize(filtrelidizi.length);
         }
         else {
-            console.log("Sadece Renk Seçildi")
+        
             const querySnapshot = await getDocs(query(collection(db, "urunler"), where("cinsiyet", "==", params.Cinsiyet), where("urun_renk", "in", RenkFiltre), orderBy('urun_id')));
             querySnapshot.forEach(element => {
                 filtrelidizi.push(element.data())
@@ -180,7 +188,7 @@ function Products() {
                                             <div key={value} className="col-lg-4 col-12 col-md-6 col-sm-6 mb-5 border border-dark-0">
                                                 <div className="product">
                                                     <div className="product-wrap">
-                                                        <Link to={"/SingleProduct/" + element.urun_id + "/" + element.urun_markasi}><LazyLoadImage placeholderSrc={PlaceholderImage} width={250} height={350} src={element.urun_resim} alt="product-img" /></Link>
+                                                        <Link to={"/SingleProduct/" + element.urun_id + "/" + element.urun_markasi}><LazyLoadImage className="img-first" placeholderSrc={PlaceholderImage} width={250} height={350} src={element.urun_resim} alt="product-img" /></Link>
                                                         <Link to={"/SingleProduct/" + element.urun_id + "/" + element.urun_markasi}><div className="div"><img className="img-second" width="100%" height={150} src={logo} alt="product-img" /></div></Link>
                                                     </div>
                                                     {element.kargo_fiyat == 0 && <span className="kargo_bedava">Kargo Bedava</span>}                               
@@ -283,7 +291,7 @@ function Products() {
                     </div>
                 </div>
             </section>
-            {setFilterCheck == true && <div>Veri Yok gardaş</div>}
+            {setFilterCheck == true && <div>Veri Yok</div>}
         </div>
     )
 }

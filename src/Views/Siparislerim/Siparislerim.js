@@ -18,12 +18,15 @@ import React,{ useContext,useEffect,useState} from "react";
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import PlaceholderImage from "../../PlaceHolderİmages/FYKHA.jpg";
 import 'react-lazy-load-image-component/src/effects/black-and-white.css';
+import Lottie from "lottie-react";
+import LoadingAnimation from "../../Animation/9965-loading-spinner.json";
 export default function Siparislerim() {
 const [Siparisler, setSiparisler] = useState([])
 const [Urunler, setUrunler] = useState([])
 const [Loading, setLoading] = useState(true)
 const {currentuser} = useContext(AuthContext)
 useEffect(() => {
+  document.title="Siparişlerim";
   const siparisleri_getir=async()=>{
     const querySnapshot = await getDocs(query(collection(db, "Siparisler"),where("siparisveren","==",currentuser.uid),orderBy('sipariszamani',"desc")));
     if(querySnapshot.size!=0){
@@ -36,9 +39,6 @@ useEffect(() => {
               }            
           });
       });
-    }
-    else{
-      console.log("sipariş yok")
     }
   
 
@@ -74,6 +74,7 @@ useEffect(() => {
     const [open, setOpen] = React.useState(false);
   
     return (
+      Loading==false ? 
       <React.Fragment>
         <TableRow sx={{ '& > *': { borderBottom: 'unset' } }}>
           <TableCell>
@@ -143,6 +144,10 @@ useEffect(() => {
           </TableCell>
         </TableRow>
       </React.Fragment>
+      :
+      <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+      <Lottie animationData={LoadingAnimation} style={{ width: 200, height: 200 }} />
+      </div>
     );
   }
 
@@ -156,12 +161,15 @@ useEffect(() => {
         urun_bilgileri["adet"]=urun_numaralari.Adet;
         dizi.push(urun_bilgileri)
       })
-      rows.push(createData(element.Urunler.length, element.siparistarihi, element.odemeyontemi, element.odenen + " TL", "Hazırlanıyor",dizi))
+      rows.push(createData(element.Urunler.length, element.siparistarihi, element.odemeyontemi, element.odenen + " TL", element.SiparisDurumu,dizi))
     
     })      
-    :<div style={{position:"absolute",width:"94%",display:"flex",textAlign:"center",justifyContent:"center",alignItems:"center"}}><div>Yükleniyor</div></div>}
+    : <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+    <Lottie animationData={LoadingAnimation} style={{ width: 200, height: 200 }} />
+    </div>}
 
   return (
+    Loading==false ? 
     <TableContainer component={Paper}>
       <Table aria-label="collapsible table">
         <TableHead>
@@ -181,5 +189,9 @@ useEffect(() => {
         </TableBody>
       </Table>
     </TableContainer>
+    :
+    <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+    <Lottie animationData={LoadingAnimation} style={{ width: 200, height: 200 }} />
+    </div>
   );
 }
