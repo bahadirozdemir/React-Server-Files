@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/static/css/main.a9bd5ab1.css",
+    "main.js": "/static/js/main.7016f7be.js",
+    "static/media/Thank.png": "/static/media/Thank.49c8bb30b1e1b523086e.png",
+    "static/media/FYKHA.png": "/static/media/FYKHA.a137b20827d07992312a.png",
+    "static/media/FYKHA.jpg": "/static/media/FYKHA.014e463eb65aa5738c2c.jpg",
+    "index.html": "/index.html",
+    "main.a9bd5ab1.css.map": "/static/css/main.a9bd5ab1.css.map",
+    "main.7016f7be.js.map": "/static/js/main.7016f7be.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.a9bd5ab1.css",
+    "static/js/main.7016f7be.js"
+  ]
+}
